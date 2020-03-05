@@ -30,7 +30,6 @@ dynamic
 	],
 	"comment": "...descriptive str..."
 }
-
 """
 
 class MongoDBDatabase:
