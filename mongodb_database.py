@@ -41,26 +41,16 @@ class MongoDBDatabase:
 		pass
 
 	def get_value(self, scanID, atlas_name, feature_name):
-		self.scanID=scanID
-		self.atlats_name=atlas_name
-		self.feature_name=feature_name
 		pass
 
 	def set_value(self, scanID, atlas_name, feature_name, value):
-		self.scanID=scanID
-		self.atlats_name=atlas_name
-		self.feature_name=feature_name
 		pass
 
-def generate_database(Directory_name):
+def generate_database():
 	"""
 	Generate MongoDB from scratch. 
 	Scan a directory and move the directory to MongoDB
 	"""
-	import pymongo
-	client=pymongo.MongoClient(host='localhost',port=27017)
-	db=client['CSV-data']
-	filename=Directory_name
 	pass
 
 def test_MongoDB_query():
