@@ -46,7 +46,6 @@ class MongoDBDatabase:
 		self.feature_name=feature_name
 		pass
 
-
 	def set_value(self, scanID, atlas_name, feature_name, value):
 		self.scanID=scanID
 		self.atlats_name=atlas_name
