@@ -4,7 +4,7 @@ A Redis database would be created on-the-fly and (possibly)
 destroyed after usage.
 """
 
-import redis #这句话好像放不进类里面诶
+import redis
 import pymongo
 class RedisDatabase:
 	"""
