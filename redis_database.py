@@ -87,3 +87,4 @@ if __name__ == '__main__':
 	a.start_redis()
 	a.get_data_from_mongodb()
 	print(a.get_value(a.generate_key()))
+
