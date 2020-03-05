@@ -4,6 +4,7 @@ A Redis database would be created on-the-fly and (possibly)
 destroyed after usage.
 """
 
+
 import redis
 import pymongo
 import os
@@ -116,3 +117,6 @@ if __name__ == '__main__':
 	a=RedisDatabase()
 	a.start_redis()
 	a.flushall()
+	a.get_data_from_mongodb()
+	print(a.get_value(a.generate_key()))
+
