@@ -1,10 +1,10 @@
+# coding=utf-8
 """
 Redis is a high-speed high-performance cache database.
 A Redis database would be created on-the-fly and (possibly)
 destroyed after usage.
 """
-
-
+import mongodb_database
 import redis
 import pymongo
 import os
@@ -17,10 +17,10 @@ class RedisDatabase:
 	def __init__(self, client = "mongodb://localhost:27017/", db = "runoobdb", col = "static", password=""):
 		self.rdb = redis.Redis()
 		# pool = redis.ConnectionPool()
-		#链接这里会有改动
 		self.mdb_client = pymongo.MongoClient(client)
 		self.mdb = self.mdb_client[db]
 		self.mdb_col = self.mdb[col]
+		#self.mdb= mongodb_database.MongoDBDatabase()
 
 	#我在考虑下面三个代码的实现有没有必要
 	def is_redis_running(self):
@@ -53,12 +53,12 @@ class RedisDatabase:
 		print("redis has been stopped")
 
 	#这个接口可能会用monggodb的接口
-	def get_data_from_mongodb(self, query = {'scan':'caipinron_20180412'}):
-		doc = self.mdb_col.find(query)
-		if doc != None:
+	def get_data_from_mongodb(self, query = {'scan':"baihanxiang_20190307"}):
+		if self.mdb_col.count_documents(query):
+			doc = self.mdb_col.find(query)
 			for i in doc:
 				newkey = i['scan'] + ':' + i['atlas'] + ':' + i['feature'] + ':0'
-				self.rdb.set(newkey, (i['content']))
+				self.rdb.set(newkey, (i['content']),ex=1800)
 			print("The keys have been successfully inserted into redis")
 		else:
 			print("Can't find the key you look for")
@@ -70,19 +70,13 @@ class RedisDatabase:
 			pass #这里写动态数据
 		return key
 
-	#重载了赋值接口(这好像不是重载）
-	def set_value_byname(self,subject_name, scan_date, atlas_name, feature_name, is_dynamic, value):
-		key=self.generate_key(subject_name, scan_date, atlas_name, feature_name, is_dynamic)
-		self.set_value_bykey(key,value)
-	def set_value_bykey(self, key, value):
-		self.rdb.set(key,value)
+	#对于赋值接口没有做成批量赋值，不知道有没有需要
+	def set_value(self, key, value):
+		self.rdb.set(key, value,ex=1800)
 		print('The key has been successfully inserted into redis')
 
-	#重载了查询接口，查询接口在MongoDB那里面
-	def get_value_byname(self,subject_name, scan_date, atlas_name, feature_name, is_dynamic):
-		key=self.generate_key(subject_name,scan_date,atlas_name,feature_name,is_dynamic)
-		self.get_value_bykey(key)
-	def get_value_bykey(self, key):
+	#插入接口做成批量插入，查询需求？
+	def get_value(self, key):
 		res = self.rdb.get(key)
 		if res:
 			return res.decode()
@@ -116,7 +110,4 @@ def test_Redis_query():
 if __name__ == '__main__':
 	a=RedisDatabase()
 	a.start_redis()
-	a.flushall()
 	a.get_data_from_mongodb()
-	print(a.get_value(a.generate_key()))
-

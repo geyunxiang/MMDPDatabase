@@ -33,7 +33,6 @@ dynamic
 
 """
 
-
 class MongoDBDatabase:
 	"""
 	docstring for MongoDBDatabase
@@ -79,3 +78,4 @@ def old_loading_method():
 
 if __name__ == '__main__':
 	old_loading_method()
+
