@@ -3,6 +3,7 @@ import os
 import numpy as np
 import json
 import pymongo
+import pickle
 SCAN =['baihanxiang_20190307','caipinrong_20180412','baihanxiang_20190211']
 ATLAS=['aal','aal2','aicha','bnatlas','brodmann_lr','brodmann_lrce']
 FEATURE=['bold_interBC','bold_interCCFS','bold_interLE','bold_interWD','bold_net','dwi_FA','dwi_MD','dwi_net','t1_GMD']
@@ -17,9 +18,8 @@ def Inimongodb():#实验用mongodb数据库
             for k in FEATURE:
                 path = r'E:\Features' + '\\' + i + '\\' + j + '\\' + k + '.csv'  # 路径可以自己改
                 if os.path.exists(path):
-                    file = open(path)
-                    scsv = file.read()
-                    mydict = {'scan': i, 'atlas': j, 'feature': k, 'dynamic': 0, 'content': scsv}
+                    arr = np.loadtxt(path,delimiter=',')
+                    mydict = {'scan': i, 'atlas': j, 'feature': k, 'dynamic': 0, 'content': pickle.dumps(arr)}
                     x = mycol.insert_one(mydict)
 
 def GetDataFromMgdb(myquery={'scan':'caipinrong_20180412'}): #需要怎样的查询条件呢？
@@ -64,5 +64,39 @@ def Strtonp(str):  #还是没有找到好的方法，暂时不改动（如果换
     else:
         return nparray
 #Inimongodb()
-#GetDataFromMgdb()
-#print(GetStaticData())
+'''
+import time
+rdb = redis.Redis(host='127.0.0.1', port=6379, db=1)
+start =time.clock()
+a=[]
+for i in SCAN:
+    for j in ATLAS:
+        for k in FEATURE:
+            key = i + ':' + j + ':' + k + ':0'
+            csv = rdb.get(key)
+            a.append(csv)
+end = time.clock()
+print('Running time: %s Seconds'%(end-start))
+start =time.clock()
+b=[]
+for i in SCAN:
+    for j in ATLAS:
+        for k in FEATURE:
+            key = i + ':' + j + ':' + k + ':0'
+            b.append(key)
+c=rdb.mget(b)
+if a==c:
+    print("yes")
+else:
+    print("no")
+end = time.clock()
+print('Running time: %s Seconds'%(end-start))
+'''
+a="Hello"
+b=[]
+b.append(a)
+print(b)
+c=[]
+c.append('Hello')
+print(c)
+
