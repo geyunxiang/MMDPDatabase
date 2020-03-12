@@ -29,7 +29,7 @@ dynamic
 	"comment": "...descriptive str..."
 	}
 
-    """
+"""
 
 import pymongo
 import numpy as np 
@@ -62,13 +62,13 @@ class MongoDBDatabase:
 	"""
 	docstring for MongoDBDatabase
 	"""
-    
+
 	def __init__(self,NameList):
 		self.NameList=NameList
 		self.client=pymongo.MongoClient('localhost',27017)
 		self.db=self.client['TotalData-database']
 		self.collection=self.db['csvdata-collection']
-	    
+
 	def generate_database(self): 
 		"""
 		Generate MongoDB from scratch. 
@@ -76,7 +76,7 @@ class MongoDBDatabase:
 		"""
 		mriscans=loader.generate_mriscans(self.NameList)
 		for mriscan in mriscans:
-			for atlas_name in atlas_list:				
+			for atlas_name in atlas_list:
 				atlasobj=atlas.get(atlas_name)
 				for attr_name in attr_list:
 					attr=loader.load_attrs(mriscan, atlasobj, attr_name)
@@ -90,9 +90,6 @@ class MongoDBDatabase:
 						"comment":""
 						}
 					self.collection.insert_one(document)
-
-	if __name__ == '__main__':
-		pass
 
 	def generate_static_query(self,subject_name, scan_date , atlas_name , feature_name):
 		m_query={}
