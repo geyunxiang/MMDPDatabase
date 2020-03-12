@@ -1,21 +1,19 @@
 """
-	MongoDB is a non-relational database used to store feature values.
-	It stores data in JSON format, with a hierarchy of 
-	db server -> database -> collection -> record. 
-
-	The record looks like this:
-	static
-	{
+MongoDB is a non-relational database used to store feature values.
+It stores data in JSON format, with a hierarchy of 
+db server -> database -> collection -> record. 
+The record looks like this:
+static
+{
 	"scan": "baihanxiang_20190211",
 	"atlas": "brodmann_lrce",
 	"feature": "BOLD.inter.BC",
 	"dynamic": false,
 	"value": "...actual csv str...",
 	"comment": "...descriptive str..."
-	}
-
-	dynamic
-	{
+}
+dynamic
+{
 	"scan": "CMSA_01",
 	"atlas": "brodmann_lrce", 
 	"feature": "BOLD.inter.BC",
@@ -113,7 +111,6 @@ class MongoDBDatabase:
 
 	def exists_static(self,subject_name, scan_date, atlas_name , feature_name):
 		return self.collection.count_documents(self.generate_static_query(subject_name, scan_date, atlas_name , feature_name))
-
 
 	"""
 	def old_loading_method():

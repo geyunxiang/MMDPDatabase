@@ -1,28 +1,31 @@
+# coding=utf-8
 """
 Redis is a high-speed high-performance cache database.
 A Redis database would be created on-the-fly and (possibly)
 destroyed after usage.
 """
-
-
+import mongodb_database
 import redis
 import pymongo
 import os
+import pickle
+import re
+import numpy as np
+from mmdps.proc import netattr , atlas
 
 class RedisDatabase:
 	"""
 	docstring for RedisDatabase
 	"""
 
-	def __init__(self, client = "mongodb://localhost:27017/", db = "runoobdb", col = "static", password=""):
+	def __init__(self, host = 'localhost', port = 27017, db = "runoobdb", col = "static", password=""):
 		self.rdb = redis.Redis()
 		# pool = redis.ConnectionPool()
-		#链接这里会有改动
-		self.mdb_client = pymongo.MongoClient(client)
-		self.mdb = self.mdb_client[db]
-		self.mdb_col = self.mdb[col]
+		#self.mdb_client = pymongo.MongoClient(client)
+		#self.mdb = self.mdb_client[db]
+		#self.mdb_col = self.mdb[col]
+		self.mdb= mongodb_database.MongoDBDatabase(host,port,db,col)
 
-	#我在考虑下面三个代码的实现有没有必要
 	def is_redis_running(self):
 		try:
 			process = len(os.popen('tasklist | findstr ' + "redis-server.exe").readlines())
@@ -52,71 +55,103 @@ class RedisDatabase:
 			os.system("e:/redis/redis-server --service-stop")
 		print("redis has been stopped")
 
-	#这个接口可能会用monggodb的接口
-	def get_data_from_mongodb(self, query = {'scan':'caipinron_20180412'}):
-		doc = self.mdb_col.find(query)
-		if doc != None:
+	def generate_database(self, subject_name = '', scan_date = '' , atlas_name = '' , feature_name = ''):
+		if self.mdb.exists_static(subject_name, scan_date , atlas_name , feature_name):
+			doc = self.mdb.query_static(subject_name, scan_date , atlas_name , feature_name)
 			for i in doc:
 				newkey = i['scan'] + ':' + i['atlas'] + ':' + i['feature'] + ':0'
-				self.rdb.set(newkey, (i['content']))
+				self.rdb.set(newkey, (i['content']),ex=1800)
 			print("The keys have been successfully inserted into redis")
 		else:
 			print("Can't find the key you look for")
 
-	def generate_key(self, subject_name = 'baihanxiang', scan_date = '20190307', atlas_name = 'aal', feature_name = 'bold_interBC', is_dynamic = False):
-		if is_dynamic == False:
-			key = subject_name+'_'+scan_date + ':' + atlas_name + ':' + feature_name + ':0'
-		else:
-			pass #这里写动态数据
+	def generate_static_key(self, subject_name, scan_date, atlas_name, feature_name):
+		key = subject_name+'_'+scan_date + ':' + atlas_name + ':' + feature_name +':0'
 		return key
 
-	#重载了赋值接口(这好像不是重载）
-	def set_value_byname(self,subject_name, scan_date, atlas_name, feature_name, is_dynamic, value):
-		key=self.generate_key(subject_name, scan_date, atlas_name, feature_name, is_dynamic)
-		self.set_value_bykey(key,value)
-	def set_value_bykey(self, key, value):
-		self.rdb.set(key,value)
+	def set_static_value(self,subject_name , scan_date , atlas_name , feature_name, value):
+		self.rdb.set(self.generate_static_key(subject_name , scan_date , atlas_name , feature_name ), value,ex=1800)
 		print('The key has been successfully inserted into redis')
 
-	#重载了查询接口，查询接口在MongoDB那里面
-	def get_value_byname(self,subject_name, scan_date, atlas_name, feature_name, is_dynamic):
-		key=self.generate_key(subject_name,scan_date,atlas_name,feature_name,is_dynamic)
-		self.get_value_bykey(key)
-	def get_value_bykey(self, key):
-		res = self.rdb.get(key)
-		if res:
-			return res.decode()
-			#return pickle.loads(res.decode()) #使用pickle储存的返回情况
+	def get_static_values(self, subject_name , scan_date , atlas_name , feature_name):
+		subject =[]
+		if type(subject_name) is str:
+			subject = []
+			subject.append(subject_name)
 		else:
-			list = key.split(':')
-			query = {
-				"scan": list[0],
-				"atlas": list[1],
-				"feature": list[2],
-				"dynamic": 0
-			}
-			self.get_data_from_mongodb(query)
+			subject = subject_name
+		if type(scan_date) is str:
+			scan = []
+			scan.append(scan_date)
+		else:
+			scan=scan_date
+		if type(atlas_name) is str:
+			altas = []
+			altas.append(atlas_name)
+		else:
+			altas = atlas_name
+		if type(feature_name) is str:
+			feature = []
+			feature.append(feature_name)
+		else:
+			feature = feature_name
+		keys=[]
+		for i in subject:
+			for j in scan:
+				for k in altas:
+					for l in feature:
+						key = self.generate_static_key(i,j,k,l)
+						keys.append(key)
+		res = self.rdb.mget(keys)
+		list=[]
+		for i in range(len(res)):
+			if not res[i]:
+				query = re.split(':|_',keys[i])
+				if self.mdb.exists_static(query[0], query[1], query[2], query[3]):
+					doc = self.mdb.query_static(query[0], query[1], query[2], query[3])
+					value=pickle.loads(doc[0]["content"])
+					self.rdb.set(keys[i], doc[0]["content"])
+				else:
+					print("Can't find the key you look for")
+					continue
+			else:
+				value = pickle.loads(res[i])
+			if  keys[i].split(':')[2] not in ['dwi_net','bold_net']: #这里要改一下
+				arr = netattr.Attr(value, atlas.get(atlas_name), keys[i].split(':')[2])
+				list.append(arr)
+			else:
+				net = netattr.Net(value, atlas.get(atlas_name), keys[i].split(':')[0])
+				list.append(net)
+		return list
+
 	def flushall(self):
 		self.rdb.flushall()
 
-def test_generate_Redis():
-	"""
-	A test program that generates Redis database (possibly) based on directory.
-	Note this function will not be used in the released version, since Redis will 
-	query MongoDB to generate database rather than query directory. 
-	"""
-	pass
-
-def test_Redis_query():
-	"""
-	A test program.
-	"""
-	pass
+	def get_static_value(self, subject_name , scan_date , atlas_name , feature_name):
+		key=self.generate_static_key(subject_name , scan_date , atlas_name , feature_name)
+		res=self.rdb.get(key)
+		if not res:
+			if self.mdb.exists_static(subject_name, scan_date, atlas_name, feature_name):
+				doc=self.mdb.query_static(subject_name , scan_date , atlas_name , feature_name)
+				res = doc[0]["content"]
+				self.rdb.set(key,res)
+			else:
+				print("Can't find the key you look for")
+				return None
+		value = pickle.loads(res)
+		if  feature_name not in ['dwi_net','bold_net']:
+			arr = netattr.Attr(value,atlas.get(atlas_name),feature_name)
+			return arr
+		else:
+			net = netattr.Net(value,atlas.get(atlas_name),feature_name) #这个命名规则我没有看懂
+			return net
 
 if __name__ == '__main__':
 	a=RedisDatabase()
 	a.start_redis()
-	a.flushall()
-	a.get_data_from_mongodb()
-	print(a.get_value(a.generate_key()))
-
+	a.generate_database()
+	b = a.get_static_values('baihanxiang',['20190307','20190307'],'aal','bold_net')
+	print(b[0].data.shape)
+	print(b[0].name)
+	print(b[1].data.shape)
+	print(b[1].name)
