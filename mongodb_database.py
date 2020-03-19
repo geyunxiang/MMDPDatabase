@@ -61,7 +61,7 @@ class MongoDBDatabase:
 	docstring for MongoDBDatabase
 	"""
     
-	def __init__(self,host='localhost',port=27017,db="TotalData",col="features",password=''):
+	def __init__(self,host='localhost',port=27017,db='TotalData',col='features',password=''):
 		self.client=pymongo.MongoClient(host,port)
 		self.db=self.client[db]
 		self.col=self.db[col]
@@ -69,72 +69,72 @@ class MongoDBDatabase:
 	def generate_static_query(self,subject_scan,atlas_name,feature_name):
 		m_query={}
 		if subject_scan!='':
-			m_query["scan"]=subject_scan
+			m_query['scan']=subject_scan
 		if atlas_name!='':
-			m_query["atlas"]=atlas_name
+			m_query['atlas']=atlas_name
 		if feature_name!='':
-			m_query["feature"]=feature_name
-		m_query["dynamic"]="false"
+			m_query['feature']=feature_name
+		m_query['dynamic']='false'
 		return m_query
 	
 	def genarate_dynamic_query(self,subject_scan,atlas_name,feature_name):
 		m_query={}
 		if subject_scan!='':
-			m_query["scan"]=subject_scan
+			m_query['scan']=subject_scan
 		if atlas_name!='':
-			m_query["atlas"]=atlas_name
+			m_query['atlas']=atlas_name
 		if feature_name!='':
-			m_query["feature"]=feature_name
-		m_query["dynamic"]="ture"
+			m_query['feature']=feature_name
+		m_query['dynamic']='true'
 		return m_query
 
 
 	
 	def query_static(self,subject_scan,atlas_name,feature_name):
-		self.col=self.db["features"]
+		self.col=self.db['features']
 		m_query=self.generate_static_query(subject_scan,atlas_name,feature_name)
 		return self.col.find(m_query)
 
 	def query_dynamic(self,subject_scan,atlas_name,feature_name):
-		self.col=self.db["dynamic_data"]
+		self.col=self.db['dynamic_data']
 		m_query=self.generate_dynamic_query(subject_scan,atlas_name,feature_name)
 		return self.col.find(m_query)
 
 	def exists_static(self,subject_scan, atlas_name , feature_name):
-		self.col=self.db["features"]
+		self.col=self.db['features']
 		return self.col.count_documents(self.generate_static_query(subject_scan, atlas_name , feature_name))
 	
 	def exist_dynamic(self,subject_scan, atlas_name , feature_name):
-		self.col=self.db["dynamic_data"]
+		self.col=self.db['dynamic_data']
 		return self.col.count_documents(self.genarate_dynamic_query(subject_scan,atlas_name,feature_name))
 
 	def generate_static_document(subject_scan,atlas_name,feature_name,value):
 		static_documnet={
-			"scan":subject_scan,
-			"atlas":atlas_name,
-			"feature":feature_name,
-			"dynamic":"false",
-			"value":value,
-			"commment":''
+			'scan':subject_scan,
+			'atlas':atlas_name,
+			'feature':feature_name,
+			'dynamic':'false',
+			'value':value,
+			'commment':''
 		}
 		return static_document
 
 	def generate_dynamic_document(subject_scan,atlas_name,feature_name,value):
 		dynamic_document={
-			"scan":subject_scan,
-			"atlas":atlas_name,
-			"feature":feature_name,
-			"dynamic":"ture",
-			"window length": 22,
-			"step size": 1, 
-			"value":value,
-			"commment":''
+			'scan':subject_scan,
+			'atlas':atlas_name,
+			'feature':feature_name,
+			'dynamic':'true',
+			'window length': 22,
+			'step size': 1, 
+			'value':value,
+			'commment':''
 		}
 		return dynamic_document
 	
 	def generate_dynamic_database(self,subject_scan,atlas_name,feature_name,value):
 		#目前不知道动态数据的具体目录结构
-		self.col=self.db["dynamic_data"]
+		self.col=self.db['dynamic_data']
 		self.col.insert_one(self.generate_dynamic_document(subject_scan,atlas_name,feature_name,value))
 
 
