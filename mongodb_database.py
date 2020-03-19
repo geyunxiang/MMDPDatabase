@@ -1,19 +1,21 @@
 """
-MongoDB is a non-relational database used to store feature values.
-It stores data in JSON format, with a hierarchy of 
-db server -> database -> collection -> record. 
-The record looks like this:
-static
-{
+	MongoDB is a non-relational database used to store feature values.
+	It stores data in JSON format, with a hierarchy of 
+	db server -> database -> collection -> record. 
+
+	The record looks like this:
+	static
+	{
 	"scan": "baihanxiang_20190211",
 	"atlas": "brodmann_lrce",
 	"feature": "BOLD.inter.BC",
 	"dynamic": false,
 	"value": "...actual csv str...",
 	"comment": "...descriptive str..."
-}
-dynamic
-{
+	}
+
+	dynamic
+	{
 	"scan": "CMSA_01",
 	"atlas": "brodmann_lrce", 
 	"feature": "BOLD.inter.BC",
@@ -29,7 +31,7 @@ dynamic
 	"comment": "...descriptive str..."
 	}
 
-"""
+    """
 
 import pymongo
 import numpy as np 
@@ -62,7 +64,7 @@ class MongoDBDatabase:
 	def __init__(self,host='localhost',port=27017,db="TotalData",col="features",password=''):
 		self.client=pymongo.MongoClient(host,port)
 		self.db=self.client[db]
-		self.collection=self.db[col]
+		self.col=self.db[col]
 
 	def generate_static_query(self,subject_scan,atlas_name,feature_name):
 		m_query={}
@@ -73,12 +75,66 @@ class MongoDBDatabase:
 		if feature_name!='':
 			m_query["feature"]=feature_name
 		m_query["dynamic"]="false"
-		m_query["comment"]=""
 		return m_query
 	
+	def genarate_dynamic_query(self,subject_scan,atlas_name,feature_name):
+		m_query={}
+		if subject_scan!='':
+			m_query["scan"]=subject_scan
+		if atlas_name!='':
+			m_query["atlas"]=atlas_name
+		if feature_name!='':
+			m_query["feature"]=feature_name
+		m_query["dynamic"]="ture"
+		return m_query
+
+
+	
 	def query_static(self,subject_scan,atlas_name,feature_name):
+		self.col=self.db["features"]
 		m_query=self.generate_static_query(subject_scan,atlas_name,feature_name)
-		return self.collection.find(m_query)
+		return self.col.find(m_query)
+
+	def query_dynamic(self,subject_scan,atlas_name,feature_name):
+		self.col=self.db["dynamic_data"]
+		m_query=self.generate_dynamic_query(subject_scan,atlas_name,feature_name)
+		return self.col.find(m_query)
+
+	def exists_static(self,subject_scan, atlas_name , feature_name):
+		self.col=self.db["features"]
+		return self.col_static.count_documents(self.generate_static_query(subject_scan, atlas_name , feature_name))
+
+	def generate_static_document(subject_scan,atlas_name,feature_name,value):
+		static_documnet={
+			"scan":subject_scan,
+			"atlas":atlas_name,
+			"feature":feature_name,
+			"dynamic":"false",
+			"value":value,
+			"commment":''
+		}
+		return static_document
+
+	def generate_dynamic_document(subject_scan,atlas_name,feature_name,value):
+		dynamic_document={
+			"scan":subject_scan,
+			"atlas":atlas_name,
+			"feature":feature_name,
+			"dynamic":"ture",
+			"window length": 22,
+			"step size": 1, 
+			"value":value,
+			"commment":''
+		}
+		return dynamic_document
+	
+	def generate_dynamic_database(self,subject_scan,atlas_name,feature_name,value):
+		#目前不知道动态数据的具体目录结构
+		self.col=self.db["dynamic_data"]
+		self.col.insert_one(self.generate_dynamic_document(subject_scan,atlas_name,feature_name,value))
+
+
+
 
 
 
@@ -93,21 +149,16 @@ def generate_static_database():
 			atlasobj=atlas.get(atlas_name)
 			for attr_name in attr_list:
 				attr=loader.load_attrs(mriscan, atlasobj, attr_name)
-				data_str=pickle.dumps(attr[0].data)	
-				document={
-					"scan":mriscan,
-					"atlas":atlas_name,
-					"feature":attr_name,					
-					"value":data_str,
-					"dynamic":"false",
-					"comment":""
-					}
-					database.collection.insert_one(document)
+				data_str=pickle.dumps(attr[0].data)
+				database.col.insert_one(database.generate_static_documnet(meiscan,atlas_name,feature_name,data_str))	
 	return database
 	
 
 
 
 if __name__ == '__main__':
-	a=generate_static_database()
+	a=MongoDBDatabase()
+	a.generate_database()
+
+
 
