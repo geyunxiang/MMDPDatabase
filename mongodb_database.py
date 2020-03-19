@@ -68,6 +68,8 @@ class MongoDBDatabase:
 		self.client=pymongo.MongoClient('localhost',27017)
 		self.db=self.client['TotalData-database']
 		self.collection=self.db['csvdata-collection']
+		self.temp_db = self.client['Temp-database']
+		self.temp_collection = self.temp_db['Temp-collection']
 
 	def generate_database(self): 
 		"""
@@ -109,6 +111,36 @@ class MongoDBDatabase:
 	def exists_static(self,subject_name, scan_date, atlas_name , feature_name):
 		return self.collection.count_documents(self.generate_static_query(subject_name, scan_date, atlas_name , feature_name))
 
+	def put_temp_data(self, temp_data, name, description = None):
+		"""
+		Insert temporary data into MongoDB. 
+		Input temp_data as a serializable object (like np.array) and name as a string.
+		The description argument is optional
+		"""
+		# check if name is already in temp database
+		if self.temp_collection.count_documents(dict(name = name)) > 0:
+			raise MultipleRecordException(name)
+		document = dict(value = pickle.dumps(temp_data), name = name, description = description)
+		self.temp_collection.insert_one(document)
+
+	def get_temp_data(self, name):
+		"""
+		Get temporary data with name
+		Return a dict with keys = value:np.array, name:str, description:str
+		"""
+		result = self.temp_collection.find_one(dict(name = name))
+		result['value'] = pickle.loads(result['value'])
+		return result
+
+	def remove_temp_data(self, name):
+		"""
+		Delete all temp records with the input name
+		If None is input, delete all temp data
+		"""
+		if name is None:
+			self.temp_collection.delete_many({})
+		else:
+			self.temp_collection.delete_many(dict(name = name))
 	"""
 	def old_loading_method():
 	from mmdps.proc import loader, atlas
@@ -118,3 +150,15 @@ class MongoDBDatabase:
 	attr=loader.load_attrs(['baihanxiang_20190211'], atlasobj, 'BOLD.BC')
 	data_str = pickle.dumps(net.data)
 	"""
+
+class MultipleRecordException(Exception):
+	"""
+	"""
+	def __init__(self, name):
+		self.name = name
+
+	def __str__(self):
+		return 'Multiple record found for name = ' + self.name + '. Please consider a new name.'
+
+	def __repr__(self):
+		return 'Multiple record found for name = ' + self.name + '. Please consider a new name.'
