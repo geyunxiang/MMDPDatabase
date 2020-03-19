@@ -44,9 +44,10 @@ from mmdps import rootconfig
 
 
 root_folder=rootconfig.path.feature_root
-#mriscans=loader.generate_mriscans(namelist)
+mriscans=['baihanxiang_20190307','caipinrong_20180412','baihanxiang_20190211']
 atlas_list = ['brodmann_lr', 'brodmann_lrce', 'aal', 'aicha', 'bnatlas']
 attr_list=['BOLD.BC','BOLD.CCFS','BOLD.LE','BLD.WD','BOLD.net','DWI.FA','DWI.MD','DWI.net']
+"""
 atlasobj = atlas.get('brodmann_lrce')
 net = loader.load_single_network(atlasobj, 'baihanxiang_20190211')
 data_str = pickle.dumps(net.data)
@@ -55,6 +56,7 @@ attr = loader.load_attrs(['baihanxiang_20190211'], atlasobj, 'BOLD.BC')
 #attr1=l.loadSingle('baihanxiang_20190211','BOLD.BC')
 #print(attr[0].data)
 #print(pickle.dumps(attr[0].data))
+"""
 
 class MongoDBDatabase:
 	"""
@@ -97,7 +99,7 @@ class MongoDBDatabase:
 
 	def query_dynamic(self,subject_scan,atlas_name,feature_name):
 		self.col=self.db['dynamic_data']
-		m_query=self.generate_dynamic_query(subject_scan,atlas_name,feature_name)
+		m_query=self.genarate_dynamic_query(subject_scan,atlas_name,feature_name)
 		return self.col.find(m_query)
 
 	def exists_static(self,subject_scan, atlas_name , feature_name):
@@ -108,18 +110,18 @@ class MongoDBDatabase:
 		self.col=self.db['dynamic_data']
 		return self.col.count_documents(self.genarate_dynamic_query(subject_scan,atlas_name,feature_name))
 
-	def generate_static_document(subject_scan,atlas_name,feature_name,value):
-		static_documnet={
+	def generate_static_document(self,subject_scan,atlas_name,feature_name,value):
+		static_document={
 			'scan':subject_scan,
 			'atlas':atlas_name,
 			'feature':feature_name,
 			'dynamic':'false',
 			'value':value,
-			'commment':''
+			'comment':''
 		}
 		return static_document
 
-	def generate_dynamic_document(subject_scan,atlas_name,feature_name,value):
+	def generate_dynamic_document(self,subject_scan,atlas_name,feature_name,value):
 		dynamic_document={
 			'scan':subject_scan,
 			'atlas':atlas_name,
@@ -136,17 +138,17 @@ class MongoDBDatabase:
 		#目前不知道动态数据的具体目录结构
 		self.col=self.db['dynamic_data']
 		self.col.insert_one(self.generate_dynamic_document(subject_scan,atlas_name,feature_name,value))
-
+	#mongodb直接读取特征？
 
 
 
 
 
 def generate_static_database(): 
-		"""
-		Generate MongoDB from scratch. 
-		Scan a directory and move the directory to MongoDB
-		"""
+	"""
+	Generate MongoDB from scratch. 
+	Scan a directory and move the directory to MongoDB
+	"""
 	database=MongoDBDatabase()
 	for mriscan in mriscans:
 		for atlas_name in atlas_list:				
@@ -154,15 +156,11 @@ def generate_static_database():
 			for attr_name in attr_list:
 				attr=loader.load_attrs(mriscan, atlasobj, attr_name)
 				data_str=pickle.dumps(attr[0].data)
-				database.col.insert_one(database.generate_static_documnet(meiscan,atlas_name,feature_name,data_str))	
+				database.col.insert_one(database.generate_static_document(mriscan,atlas_name,attr_name,data_str))	
 	return database
 	
 
 
 
 if __name__ == '__main__':
-	a=MongoDBDatabase()
-	a.generate_database()
-
-
-
+	pass
