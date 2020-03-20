@@ -30,8 +30,7 @@
 	],
 	"comment": "...descriptive str..."
 	}
-
-    """
+"""
 
 import pymongo
 import numpy as np 
@@ -62,11 +61,13 @@ class MongoDBDatabase:
 	"""
 	docstring for MongoDBDatabase
 	"""
-    
+
 	def __init__(self,host='localhost',port=27017,db='TotalData',col='features',password=''):
 		self.client=pymongo.MongoClient(host,port)
 		self.db=self.client[db]
 		self.col=self.db[col]
+		self.temp_db = self.client['Temp-database']
+		self.temp_collection = self.temp_db['Temp-collection']
 
 	def generate_static_query(self,subject_scan,atlas_name,feature_name):
 		m_query={}
@@ -101,6 +102,7 @@ class MongoDBDatabase:
 		self.col=self.db['dynamic_data']
 		m_query=self.genarate_dynamic_query(subject_scan,atlas_name,feature_name)
 		return self.col.find(m_query)
+
 
 	def exists_static(self,subject_scan, atlas_name , feature_name):
 		self.col=self.db['features']
@@ -140,6 +142,36 @@ class MongoDBDatabase:
 		self.col.insert_one(self.generate_dynamic_document(subject_scan,atlas_name,feature_name,value))
 	#mongodb直接读取特征？
 
+	def put_temp_data(self, temp_data, name, description = None):
+		"""
+		Insert temporary data into MongoDB. 
+		Input temp_data as a serializable object (like np.array) and name as a string.
+		The description argument is optional
+		"""
+		# check if name is already in temp database
+		if self.temp_collection.count_documents(dict(name = name)) > 0:
+			raise MultipleRecordException(name)
+		document = dict(value = pickle.dumps(temp_data), name = name, description = description)
+		self.temp_collection.insert_one(document)
+
+	def get_temp_data(self, name):
+		"""
+		Get temporary data with name
+		Return a dict with keys = value:np.array, name:str, description:str
+		"""
+		result = self.temp_collection.find_one(dict(name = name))
+		result['value'] = pickle.loads(result['value'])
+		return result
+
+	def remove_temp_data(self, name):
+		"""
+		Delete all temp records with the input name
+		If None is input, delete all temp data
+		"""
+		if name is None:
+			self.temp_collection.delete_many({})
+		else:
+			self.temp_collection.delete_many(dict(name = name))
 
 
 
@@ -149,6 +181,7 @@ def generate_static_database():
 	Generate MongoDB from scratch. 
 	Scan a directory and move the directory to MongoDB
 	"""
+
 	database=MongoDBDatabase()
 	for mriscan in mriscans:
 		for atlas_name in atlas_list:				
@@ -164,3 +197,17 @@ def generate_static_database():
 
 if __name__ == '__main__':
 	pass
+
+
+class MultipleRecordException(Exception):
+	"""
+	"""
+	def __init__(self, name):
+		self.name = name
+
+	def __str__(self):
+		return 'Multiple record found for name = ' + self.name + '. Please consider a new name.'
+
+	def __repr__(self):
+		return 'Multiple record found for name = ' + self.name + '. Please consider a new name.'
+
