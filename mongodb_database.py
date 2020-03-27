@@ -115,6 +115,32 @@ class MongoDBDatabase:
 		self.col = self.db['dynamic_data']
 		self.col.insert_one(self.generate_dynamic_document(subject_scan, atlas_name, feature_name, value))
 		#mongodb直接读取特征？
+		
+	def get_atlasobj(self,atlas_name):
+		return atlas.get(atlas_name)
+
+	def get_attr(self,subject_scan,atlas_name,feature_name):
+		#directly return to an attrobj
+		if self.exists_static(subject_scan,atlas_name,feature_name):
+			binary_data=self.query_static(subject_scan,atlas_name,feature_name)['value']
+			attrdata=pickle.load(binary_data)
+			atlasobj=atlas.get(atlas_name)
+			attr=netattr.Attr(attrdata,atlasobj,feature_name)
+			return attr
+		else:
+			print("can't find the document you look for")
+			return None
+
+	def get_net(self,subject_scan,atlas_name,featue_name='BOLD.net'):
+		if self.exists_static(subject_scan,atlas_name,feature_name='BOLD.net'):
+			binary_data=self.query_static(subject_scan,atlas_name,feature_name='BOLD.net')['value']
+			netdata=pickle.load(binary_data)
+			atlasobj=atlas.get(atlas_name)
+			net=netattr.Net(netdata,atlasobj,subject_scan)
+			return net
+		else:
+			print("can't find the document you look for")
+			return None
 
 	def put_temp_data(self, temp_data, name, description = None):
 		"""
