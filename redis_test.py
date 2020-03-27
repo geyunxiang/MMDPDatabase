@@ -64,7 +64,7 @@ if __name__ == '__main__':
     #end = time.clock()
     #print('Running time: %s Seconds' % (end - start))
     #speed_test()
-    a.set_list_cash_all('hahaha',['1','2'])
-    print(a.get_list_cash('hahaha'))
+    a.set_list_cache_all('hahaha',['1','2'])
+    print(a.get_list_cache('hahaha'))
 
 
