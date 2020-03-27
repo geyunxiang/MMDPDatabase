@@ -19,15 +19,15 @@ FEATURE=['bold_interBC','bold_interCCFS','bold_interLE','bold_interWD','bold_net
 
 def Inimongodb():#实验用mongodb数据库
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-    mydb = myclient["runoobdb"]
-    mycol = mydb["static"]
+    mydb = myclient["TotalData"]
+    mycol = mydb["features"]
     for i in SCAN:
         for j in ATLAS:
             for k in FEATURE:
                 path = r'E:\Features' + '\\' + i + '\\' + j + '\\' + k + '.csv'  # 路径可以自己改
                 if os.path.exists(path):
                     arr = np.loadtxt(path,delimiter=',')
-                    mydict = {'scan': i, 'atlas': j, 'feature': k, 'dynamic': 0, 'value': pickle.dumps(arr)}
+                    mydict = {'scan': i, 'atlas': j, 'feature': k, 'dynamic': 'false', 'value': pickle.dumps(arr)}
                     x = mycol.insert_one(mydict)
 
 
@@ -40,29 +40,31 @@ def speed_test():
             for k in FEATURE:
                 key = i + ':' + j + ':' + k + ':0'
                 csv = rdb.get(key)
-                rdb.expire(key,1800)
+                #rdb.expire(key,1800)
                 a.append(csv)
     end = time.clock()
     print('Running time: %s Seconds'%(end-start))
-    start =time.clock()
     b=[]
     for i in SCAN:
         for j in ATLAS:
             for k in FEATURE:
                 key = i + ':' + j + ':' + k + ':0'
                 b.append(key)
+    start = time.clock()
     c=rdb.mget(b)
-    for i in c:
-        rdb.expire(i,1800)
+    #for i in c:
+     #   rdb.expire(i,1800)
     end = time.clock()
     print('Running time: %s Seconds'%(end-start))
 if __name__ == '__main__':
     #Inimongodb()
     a=RedisDatabase()
-    start=time.clock()
-    print(a.get_values(SCAN,ATLAS,FEATURE))
-    end = time.clock()
-    print('Running time: %s Seconds' % (end - start))
-
+    #start=time.clock()
+    #print(a.get_values(SCAN,ATLAS,FEATURE))
+    #end = time.clock()
+    #print('Running time: %s Seconds' % (end - start))
+    #speed_test()
+    a.set_list_cache_all('hahaha',['1','2'])
+    print(a.get_list_cache('hahaha'))
 
 
