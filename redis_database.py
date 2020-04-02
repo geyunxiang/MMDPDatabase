@@ -22,20 +22,36 @@ class RedisDatabase:
 		self.mdb= mongodb_database.MongoDBDatabase(password = password)
 
 	def is_redis_running(self):
-		try:
-			process = len(os.popen('tasklist | findstr ' + "redis-server.exe").readlines())
-			print('redis state : %s' % process)
-			if process >= 1:
-				return True
-			else:
+		if sys.platform == 'win32':
+			try:
+				process = len(os.popen('tasklist | findstr ' + "redis-server.exe").readlines())
+				print('redis state : %s' % process)
+				if process >= 1:
+					return True
+				else:
+					return False
+			except Exception as e:
+				print('redis connection failed，error message %s' % e)
 				return False
-		except Exception as e:
-			print('redis connection failed，error message %s' % e)
-			return False
+		elif sys.platform == 'darwin':
+			# macOS
+			pass
+			return True
+		else:
+			# other platform
+			return True
 
 	def start_redis(self, password=''):
 		if not self.is_redis_running():
-			os.system("e:/redis/redis-server --service-start")
+			if sys.platform == 'win32':
+				os.system("e:/redis/redis-server --service-start")
+			elif sys.platform == 'darwin':
+				# macOS
+				pass
+				raise Exception('redis-server not running.')
+			else:
+				pass
+				raise Exception('redis-server not running.')
 		try:
 			self.data_pool = ConnectionPool(host='127.0.0.1', port=6379, db=0)
 			self.cache_pool = ConnectionPool(host='127.0.0.1', port=6379, db=1, decode_responses=True)
@@ -46,7 +62,12 @@ class RedisDatabase:
 	def stop_redis(self):
 		if self.is_redis_running():
 			self.flushall()
-			os.system("e:/redis/redis-server --service-stop")
+			if sys.platform == 'win32':
+				os.system("e:/redis/redis-server --service-stop")
+			elif sys.platform == 'darwin':
+				pass
+			else:
+				pass
 		print("redis has been stopped")
 
 	#set value
