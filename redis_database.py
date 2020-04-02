@@ -66,6 +66,7 @@ class RedisDatabase:
 		key = subject_scan + ':' + atlas_name + ':' + feature_name +':1:'+ str(window_length) + str(step_size)
 		return key
 
+
 	#get value
 	def get_values(self, subject_scan, atlas_name = '', feature_name = '', isdynamic = False, window_length = '', step_size = ''):
 		if type(subject_scan) is str and type(atlas_name) is str and type(feature_name) is str and type(window_length) is str and type(step_size) is str:
