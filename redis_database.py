@@ -183,6 +183,7 @@ class RedisDatabase:
 			net = netattr.DynamicNet(value, atlas.get(atlas_name), subject_scan)
 			return net
 
+
 	def set_list_cache_all(self,key,value):
 		rdb = Redis(connection_pool=self.cache_pool)
 		rdb.delete(key)
