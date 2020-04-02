@@ -138,7 +138,7 @@ class RedisDatabase:
 
 	def trans_netattr(self,subject_scan , atlas_name, feature_name, value):
 		if feature_name not in ['dwi_net', 'bold_net']:  # 这里要改一下
-			arr = netattr.Attr(value, atlas.get(atlas_name), feature_name)
+			arr = netattr.Attr(value, atlas.get(atlas_name),subject_scan, feature_name)
 			return arr
 		else:
 			net = netattr.Net(value, atlas.get(atlas_name), subject_scan)
@@ -177,10 +177,10 @@ class RedisDatabase:
 
 	def trans_dynamic_netattr(self, subject_scan, atlas_name, feature_name, window_length, step_size, value):
 		if feature_name not in ['dwi_net', 'bold_net']:  # 这里要改一下
-			arr = netattr.DynamicAttr(value, atlas.get(atlas_name), feature_name)
+			arr = netattr.DynamicAttr(value, atlas.get(atlas_name), window_length, step_size, subject_scan, feature_name)
 			return arr
 		else:
-			net = netattr.DynamicNet(value, atlas.get(atlas_name), subject_scan)
+			net = netattr.DynamicNet(value, atlas.get(atlas_name), window_length, step_size, subject_scan)
 			return net
 
 
