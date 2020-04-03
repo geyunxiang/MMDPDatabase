@@ -130,16 +130,17 @@ def loader_speed_test_network():
 def loader_speed_test_attr():
     start = time.perf_counter()
     scan_list = list(os.listdir(rootconfig.path.feature_root))
-    for atlas_name in ATLAS:
-        atlasobj = atlas.get(atlas_name)
-        for feature_name in ATTR_FEATURE:
-            try:
-                attr = loader.load_attrs(scan_list, atlasobj, feature_name)
-            except OSError as e:
-                pass
+    for scan in os.listdir(rootconfig.path.feature_root):
+        for atlas_name in ATLAS:
+            atlasobj = atlas.get(atlas_name)
+            for feature_name in ATTR_FEATURE:
+                try:
+                    attr = loader.load_attrs([scan], atlasobj, feature_name)
+                except OSError as e:
+                    pass
     end = time.perf_counter()
     print('Loader running time: %s Seconds for attr' % (end - start))
-    # Loader running time: 3.976306203 Seconds for attr (macOS, all scans, atlases and features)
+    # Loader running time: 77.37745339 Seconds for attr (macOS, all scans, atlases and features)
 
 def float_test():
     r = redis.StrictRedis(host='localhost', port=6379, db=15)
@@ -151,8 +152,8 @@ if __name__ == '__main__':
     #float_test()
     # a=RedisDatabase()
     # a.get_values(SCAN,ATLAS,FEATURE)
-    redis_speed_test_network()
+    # redis_speed_test_network()
     # mongo_speed_test_network()
-    # loader_speed_test_network()
+    loader_speed_test_attr()
 
 
