@@ -17,9 +17,9 @@ class RedisDatabase:
 	docstring for RedisDatabase
 	"""
 
-	def __init__(self, password=""):
+	def __init__(self, password = ""):
 		self.start_redis()
-		self.mdb= mongodb_database.MongoDBDatabase(password = password)
+		self.mdb = mongodb_database.MongoDBDatabase(password = password)
 
 	def is_redis_running(self):
 		if sys.platform == 'win32':
@@ -71,16 +71,16 @@ class RedisDatabase:
 		print("redis has been stopped")
 
 	#set value
-	def set_value(self,subject_scan, atlas_name, feature_name, isdynamic, value , window_length = 0 , step_size = 0):
+	def set_value(self, subject_scan, atlas_name, feature_name, isdynamic, value, window_length = 0, step_size = 0):
 		rdb = Redis(connection_pool=self.data_pool)
 		if isdynamic == False:
-			rdb.set(self.generate_static_key(subject_scan, atlas_name, feature_name ), value, ex=1800)
+			rdb.set(self.generate_static_key(subject_scan, atlas_name, feature_name), value, ex=1800)
 		else:
 			rdb.set(self.generate_dynamic_key(subject_scan, atlas_name, feature_name, window_length, step_size), value, ex=1800)
 		print('The key has been successfully inserted into redis')
 
 	def generate_static_key(self, subject_scan, atlas_name, feature_name):
-		key = subject_scan + ':' + atlas_name + ':' + feature_name +':0'
+		key = subject_scan + ':' + atlas_name + ':' + feature_name + ':0'
 		return key
 
 	def generate_dynamic_key(self, subject_scan, atlas_name, feature_name, window_length, step_size):
@@ -94,6 +94,8 @@ class RedisDatabase:
 				res = self.get_static_value(subject_scan, atlas_name, feature_name)
 			else:
 				res = self.get_dynamic_value(subject_scan, atlas_name, feature_name, window_length, step_size)
+			if res is None:
+				return None # hot fix result not found error
 			if len(res) == 1:
 				return res[0]
 			else:
@@ -204,7 +206,6 @@ class RedisDatabase:
 			net = netattr.DynamicNet(value, atlas.get(atlas_name), window_length, step_size, subject_scan)
 			return net
 
-
 	def set_list_cache_all(self,key,value):
 		rdb = Redis(connection_pool=self.cache_pool)
 		rdb.delete(key)
@@ -219,7 +220,7 @@ class RedisDatabase:
 		rdb.save()
 		return rdb.llen(key)
 
-	def get_list_cache(self, key, start =0, end = -1):
+	def get_list_cache(self, key, start = 0, end = -1):
 		rdb = Redis(connection_pool=self.cache_pool)
 		return rdb.lrange(key, start, end)
 
