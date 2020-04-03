@@ -6,7 +6,7 @@ destroyed after usage.
 """
 import mongodb_database
 from redis import ConnectionPool, Redis
-import os
+import os, sys
 import pickle
 import numpy as np
 from mmdps.proc import netattr , atlas
@@ -55,7 +55,7 @@ class RedisDatabase:
 		try:
 			self.data_pool = ConnectionPool(host='127.0.0.1', port=6379, db=0)
 			self.cache_pool = ConnectionPool(host='127.0.0.1', port=6379, db=1, decode_responses=True)
-			print('redis coonnection succeded')
+			print('redis coonnection succecded')
 		except Exception as e:
 			print('redis connection failed，error message %s' % e)
 
