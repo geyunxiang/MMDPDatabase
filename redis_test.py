@@ -8,6 +8,7 @@ import time
 from redis_database import RedisDatabase
 from mongodb_database import MongoDBDatabase
 from mmdps.proc import netattr , atlas, loader
+from mmdps import rootconfig
 
 SCAN =['baihanxiang_20190307','caipinrong_20180412','baihanxiang_20190211','caochangsheng_20161027',
        'caochangsheng_20161114','chenguwen_20150711']
@@ -20,7 +21,7 @@ SCAN =['baihanxiang_20190307','caipinrong_20180412','baihanxiang_20190211','caoc
 ATLAS=['aal','aicha','bnatlas','brodmann_lr','brodmann_lrce']
 ATTR_FEATURE=['BOLD.BC', 'BOLD.CCFS', 'BOLD.LE','BOLD.net']
 FEATURE=['bold_interBC','bold_interCCFS','bold_interLE','bold_interWD','bold_net']
-
+feature_list = ['BOLD.BC', 'BOLD.CCFS', 'BOLD.LE', 'BOLD.WD']
 
 def Inimongodb():#实验用mongodb数据库
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -36,51 +37,122 @@ def Inimongodb():#实验用mongodb数据库
                     x = mycol.insert_one(mydict)
 
 def redis_speed_test():
-    start=time.clock()
-    rdb=redis.Redis(host='127.0.0.1', port=6379, db=0)
+    rdb = redis.Redis(host='127.0.0.1', port=6379, db=0)
+    start = time.clock()
     for i in SCAN:
         for j in ATLAS:
             for k in FEATURE:
-                key=i+':'+j+':'+k+':0'
-                value= rdb.get(key)
+                key = i+':'+j+':'+k+':0'
+                value = rdb.get(key)
                 rdb.expire(key, 1800)
     end = time.clock()
     print('Redis running time: %s Seconds' % (end - start))
-def monggo_speed_test():
-    start = time.clock()
+
+def redis_speed_test_network():
+    rdb = RedisDatabase()
     mdb = MongoDBDatabase()
-    lst = []
-    for i in SCAN:
-        for j in ATLAS:
-            for k in FEATURE:
-                #if mdb.exists_static(i, j, k):
-                    a = mdb.query_static(i, j, k)[0]
-    end = time.clock()
-    print('MongoDB running time: %s Seconds' % (end - start))
-def loader_speed_test():
-    start = time.clock()
-    for i in SCAN:
-        for j in ATLAS:
-            atlasobj = atlas.get(j)
-            net = loader.load_single_network(atlasobj, i)
-    for j in ATLAS:
-        atlasobj = atlas.get(j)
-        for k in ATTR_FEATURE:
-            attr = loader.load_attrs(SCAN, atlasobj, k)
-    end = time.clock()
-    print('Loader running time: %s Seconds' % (end - start))
+    # prepare redis first
+    print('Preparing Redis...')
+    for scan in os.listdir(rootconfig.path.feature_root):
+        for atlas_name in ATLAS:
+            query_result = mdb.query_static(scan, atlas_name, 'BOLD.net')
+            if query_result is None:
+                continue
+            rdb.set_value(scan, atlas_name, 'BOLD.net', False, query_result['value'])
+    # time redis performance
+    print('Testing redis...')
+    start = time.perf_counter()
+    for scan in os.listdir(rootconfig.path.feature_root):
+        for atlas_name in ATLAS:
+            a = rdb.get_values(scan, atlas_name, 'BOLD.net')
+    end = time.perf_counter()
+    print('Redis running time: %s Seconds for network' % (end - start))
+    # Redis running time: 2.277418057000002 Seconds for network (macOS, all scans, atlases)
+
+def redis_speed_test_attr():
+    rdb = RedisDatabase()
+    mdb = MongoDBDatabase()
+    # prepare redis first
+    print('Preparing Redis...')
+    for scan in os.listdir(rootconfig.path.feature_root):
+        for atlas_name in ATLAS:
+            for feature_name in feature_list:
+                query_result = mdb.query_static(scan, atlas_name, feature_name)
+                if query_result is None:
+                    continue
+                rdb.set_value(scan, atlas_name, feature_name, False, query_result['value'])
+    # time redis performance
+    print('Testing redis...')
+    start = time.perf_counter()
+    for scan in os.listdir(rootconfig.path.feature_root):
+        for atlas_name in ATLAS:
+            for feature_name in feature_list:
+                a = rdb.get_values(scan, atlas_name, feature_name)
+    end = time.perf_counter()
+    print('Redis running time: %s Seconds for attr' % (end - start))
+    # Redis running time: 5.145073779999997 Seconds for attr (macOS, all scans, atlases and features)
+
+def mongo_speed_test_network():
+    mdb = MongoDBDatabase()
+    start = time.perf_counter()
+    for scan in os.listdir(rootconfig.path.feature_root):
+        for atlas_name in ATLAS:
+            a = mdb.get_net(scan, atlas_name)
+    end = time.perf_counter()
+    print('MongoDB running time: %s Seconds for network' % (end - start))
+    # MongoDB running time: 30.292381496999997 Seconds for network (macOS, all scans, atlases and features)
+
+def mongo_speed_test_attr():
+    mdb = MongoDBDatabase()
+    start = time.perf_counter()
+    for scan in os.listdir(rootconfig.path.feature_root):
+        for atlas_name in ATLAS:
+            for feature_name in feature_list:
+                # print('scan: %s atlas_name: %s feature_name: %s' % (scan, atlas_name, feature_name))
+                a = mdb.get_attr(scan, atlas_name, feature_name)
+    end = time.perf_counter()
+    print('MongoDB running time: %s Seconds for attr' % (end - start))
+    # MongoDB running time: 71.608240657 Seconds for attr (macOS, all scans, atlases and features)
+
+def loader_speed_test_network():
+    start_net = time.perf_counter()
+    for scan in os.listdir(rootconfig.path.feature_root):
+        for atlas_name in ATLAS:
+            atlasobj = atlas.get(atlas_name)
+            try:
+                net = loader.load_single_network(scan, atlasobj)
+            except OSError as e:
+                pass
+    end_net = time.perf_counter()
+    print('Loader running time: %s Seconds for network' % (end_net - start_net))
+    # Loader running time: 72.7688368 Seconds for network (macOS, all scans, atlases)
+
+def loader_speed_test_attr():
+    start = time.perf_counter()
+    scan_list = list(os.listdir(rootconfig.path.feature_root))
+    for atlas_name in ATLAS:
+        atlasobj = atlas.get(atlas_name)
+        for feature_name in ATTR_FEATURE:
+            try:
+                attr = loader.load_attrs(scan_list, atlasobj, feature_name)
+            except OSError as e:
+                pass
+    end = time.perf_counter()
+    print('Loader running time: %s Seconds for attr' % (end - start))
+    # Loader running time: 3.976306203 Seconds for attr (macOS, all scans, atlases and features)
 
 def float_test():
     r = redis.StrictRedis(host='localhost', port=6379, db=15)
     r.set('name',4.3E-3)
     print(r.get('name'))
+
 if __name__ == '__main__':
     #Inimongodb()
     #float_test()
-    a=RedisDatabase()
-    a.get_values(SCAN,ATLAS,FEATURE)
-    redis_speed_test()
-    monggo_speed_test()
-    loader_speed_test()
+    # a=RedisDatabase()
+    # a.get_values(SCAN,ATLAS,FEATURE)
+    redis_speed_test_network()
+    # mongo_speed_test_network()
+    # loader_speed_test_network()
 
 
