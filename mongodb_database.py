@@ -29,10 +29,8 @@ dynamic
 
 import pymongo
 import numpy as np 
-import csv
-import os
 import pickle
-from mmdps.proc import loader, atlas
+from mmdps.proc import loader, atlas, netattr
 
 class MongoDBDatabase:
 	"""
@@ -75,7 +73,7 @@ class MongoDBDatabase:
 	def query_static(self, subject_scan, atlas_name, feature_name):
 		self.col = self.db['features']
 		m_query = self.generate_static_query(subject_scan, atlas_name, feature_name)
-		return self.col.find(m_query)
+		return self.col.find_one(m_query)
 
 	def query_dynamic(self, subject_scan, atlas_name, feature_name,window_length,step_size):
 		self.col = self.db['dynamic_data']
@@ -119,31 +117,46 @@ class MongoDBDatabase:
 		self.col = self.db['dynamic_data']
 		self.col.insert_one(self.generate_dynamic_document(subject_scan, atlas_name, feature_name, value))
 		#mongodb直接读取特征？
-		
+
+	def save_static_feature(self, feature):
+		"""
+		feature could be netattr.Net or netattr.Attr
+		"""
+		# check if feature already exist
+		if self.exists_static(feature.scan, feature.atlasobj.name, feature.feature_name):
+			raise MultipleRecordException()
+		attrdata = pickle.dumps(feature.data)
+		self.col = self.db['features']
+		self.col.insert_one(self.generate_static_document(feature.scan, feature.atlasobj.name, feature.feature_name, attrdata))
+
+	def remove_static_feature(self, scan, atlas_name, feature_name):
+		self.col = self.db['features']
+		self.col.find_one_and_delete(self.generate_static_query(scan, atlas_name, feature_name))
+
 	def get_atlasobj(self,atlas_name):
 		return atlas.get(atlas_name)
 
-	def get_attr(self,subject_scan,atlas_name,feature_name):
+	def get_attr(self, subject_scan, atlas_name, feature_name):
 		#directly return to an attrobj
 		if self.exists_static(subject_scan,atlas_name,feature_name):
-			binary_data=self.query_static(subject_scan,atlas_name,feature_name)['value']
-			attrdata=pickle.load(binary_data)
-			atlasobj=atlas.get(atlas_name)
-			attr=netattr.Attr(attrdata,atlasobj,feature_name)
+			binary_data = self.query_static(subject_scan, atlas_name, feature_name)['value']
+			attrdata = pickle.loads(binary_data)
+			atlasobj = atlas.get(atlas_name)
+			attr = netattr.Attr(attrdata, atlasobj, subject_scan, feature_name)
 			return attr
 		else:
-			print("can't find the document you look for")
+			print("can't find the document you look for. scan: %s, atlas_name: %s, feature_name: %s." % (subject_scan, atlas_name, feature_name))
 			return None
 
-	def get_net(self,subject_scan,atlas_name,featue_name='BOLD.net'):
-		if self.exists_static(subject_scan,atlas_name,feature_name='BOLD.net'):
-			binary_data=self.query_static(subject_scan,atlas_name,feature_name='BOLD.net')['value']
-			netdata=pickle.load(binary_data)
-			atlasobj=atlas.get(atlas_name)
-			net=netattr.Net(netdata,atlasobj,subject_scan)
+	def get_net(self, subject_scan, atlas_name, featue_name = 'BOLD.net'):
+		if self.exists_static(subject_scan, atlas_name, feature_name = 'BOLD.net'):
+			binary_data = self.query_static(subject_scan, atlas_name, feature_name = 'BOLD.net')['value']
+			netdata = pickle.loads(binary_data)
+			atlasobj = atlas.get(atlas_name)
+			net = netattr.Net(netdata, atlasobj, subject_scan, 'BOLD.net')
 			return net
 		else:
-			print("can't find the document you look for")
+			print("can't find the document you look for. scan: %s, atlas_name: %s, feature_name: %s." % (subject_scan, atlas_name, feature_name))
 			return None
 
 	def put_temp_data(self, temp_data, name, description = None):
@@ -176,21 +189,6 @@ class MongoDBDatabase:
 			self.temp_collection.delete_many({})
 		else:
 			self.temp_collection.delete_many(dict(name = name))
-
-def generate_static_database(): 
-	"""
-	Generate MongoDB from scratch. 
-	Scan a directory and move the directory to MongoDB
-	"""
-	database = MongoDBDatabase()
-	for mriscan in mriscans:
-		for atlas_name in atlas_list:
-			atlasobj = atlas.get(atlas_name)
-			for attr_name in attr_list:
-				attr = loader.load_attrs(mriscan, atlasobj, attr_name)
-				data_str = pickle.dumps(attr[0].data)
-				database.col.insert_one(database.generate_static_document(mriscan, atlas_name, attr_name, data_str))
-	return database
 
 class MultipleRecordException(Exception):
 	"""
