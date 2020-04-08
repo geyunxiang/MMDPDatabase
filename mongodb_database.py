@@ -148,7 +148,7 @@ class MongoDBDatabase:
 			print("can't find the document you look for. scan: %s, atlas_name: %s, feature_name: %s." % (subject_scan, atlas_name, feature_name))
 			return None
 
-	def get_net(self, subject_scan, atlas_name, featue_name = 'BOLD.net'):
+	def get_net(self, subject_scan, atlas_name, feature_name = 'BOLD.net'):
 		if self.exists_static(subject_scan, atlas_name, feature_name = 'BOLD.net'):
 			binary_data = self.query_static(subject_scan, atlas_name, feature_name = 'BOLD.net')['value']
 			netdata = pickle.loads(binary_data)
@@ -190,6 +190,7 @@ class MongoDBDatabase:
 		else:
 			self.temp_collection.delete_many(dict(name = name))
 
+
 class MultipleRecordException(Exception):
 	"""
 	"""
@@ -201,6 +202,7 @@ class MultipleRecordException(Exception):
 
 	def __repr__(self):
 		return 'Multiple record found for name = ' + self.name + '. Please consider a new name.'
+
 
 if __name__ == '__main__':
 	pass
