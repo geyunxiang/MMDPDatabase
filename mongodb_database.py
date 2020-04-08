@@ -124,7 +124,7 @@ class MongoDBDatabase:
 		"""
 		# check if feature already exist
 		if self.exists_static(feature.scan, feature.atlasobj.name, feature.feature_name):
-			raise MultipleRecordException()
+			raise MultipleRecordException(feature.scan, 'Please check again.')
 		attrdata = pickle.dumps(feature.data)
 		self.col = self.db['features']
 		self.col.insert_one(self.generate_static_document(feature.scan, feature.atlasobj.name, feature.feature_name, attrdata))
@@ -157,6 +157,7 @@ class MongoDBDatabase:
 			return net
 		else:
 			print("can't find the document you look for. scan: %s, atlas_name: %s, feature_name: %s." % (subject_scan, atlas_name, feature_name))
+			raise NoRecordFoundException(subject_scan)
 			return None
 
 	def put_temp_data(self, temp_data, name, description = None):
@@ -167,7 +168,7 @@ class MongoDBDatabase:
 		"""
 		# check if name is already in temp database
 		if self.temp_collection.count_documents(dict(name = name)) > 0:
-			raise MultipleRecordException(name)
+			raise MultipleRecordException(name, 'Please consider a new name')
 		document = dict(value = pickle.dumps(temp_data), name = name, description = description)
 		self.temp_collection.insert_one(document)
 
@@ -194,14 +195,31 @@ class MongoDBDatabase:
 class MultipleRecordException(Exception):
 	"""
 	"""
-	def __init__(self, name):
+	def __init__(self, name, suggestion = ''):
+		super(MultipleRecordException, self).__init__()
 		self.name = name
+		self.suggestion = suggestion
 
 	def __str__(self):
-		return 'Multiple record found for name = ' + self.name + '. Please consider a new name.'
+		return 'Multiple record found for %s. %s' % (self.name, self.suggestion)
 
 	def __repr__(self):
-		return 'Multiple record found for name = ' + self.name + '. Please consider a new name.'
+		return 'Multiple record found for %s. %s' % (self.name, self.suggestion)
+
+
+class NoRecordFoundException(Exception):
+	"""
+	"""
+	def __init__(self, name, suggestion = ''):
+		super(NoRecordFoundException, self).__init__()
+		self.name = name
+		self.suggestion = ''
+
+	def __str__(self):
+		return 'No record found for %s. %s' % (self.name, self.suggestion)
+
+	def __repr__(self):
+		return 'No record found for %s. %s' % (self.name, self.suggestion)
 
 
 if __name__ == '__main__':
