@@ -46,67 +46,63 @@ class MongoDBDatabase:
 		self.temp_db = self.client['Temp-database']
 		self.temp_collection = self.temp_db['Temp-collection']
 
-	def generate_static_query(self, subject_scan, atlas_name, feature_name):
-		m_query = {}
-		if subject_scan != '':
-			m_query['scan'] = subject_scan
-		if atlas_name != '':
-			m_query['atlas'] = atlas_name
-		if feature_name != '':
-			m_query['feature'] = feature_name
-		m_query['dynamic'] = 'false'
-		return m_query
-
-	def genarate_dynamic_query(self, subject_scan, atlas_name, feature_name):
-		m_query = {}
-		if subject_scan != '':
-			m_query['scan'] = subject_scan
-		if atlas_name != '':
-			m_query['atlas'] = atlas_name
-		if feature_name != '':
-			m_query['feature'] = feature_name
-		m_query['dynamic'] = 'true'
-		return m_query
-
 	def query_static(self, subject_scan, atlas_name, feature_name):
 		self.col = self.db['features']
 		m_query = self.generate_static_query(subject_scan, atlas_name, feature_name)
 		return self.col.find(m_query)
 
-	def query_dynamic(self, subject_scan, atlas_name, feature_name):
+	def query_dynamic(self, subject_scan, atlas_name, feature_name, window_lenth, step_size):
 		self.col = self.db['dynamic_data']
-		m_query = self.genarate_dynamic_query(subject_scan, atlas_name, feature_name)
-		return self.col.find(m_query)
+		m_query = self.generate_dynamic_query(subject_scan, atlas_name, feature_name, window_lenth, step_size)
+		return self.col.find(m_query).sort("no", 1)
 
 	def exists_static(self, subject_scan, atlas_name, feature_name):
 		self.col = self.db['features']
 		return self.col.count_documents(self.generate_static_query(subject_scan, atlas_name, feature_name))
 
-	def exist_dynamic(self, subject_scan, atlas_name, feature_name):
+	def exists_dynamic(self, subject_scan, atlas_name, feature_name, window_lenth, step_size):
 		self.col = self.db['dynamic_data']
-		return self.col.count_documents(self.genarate_dynamic_query(subject_scan, atlas_name, feature_name))
+		return self.col.count_documents(self.generate_dynamic_query(subject_scan, atlas_name, feature_name, window_lenth, step_size))
+	def generate_static_query(self, subject_scan, atlas_name, feature_name):
+		static_document = {
+			'scan':subject_scan,
+			'atlas':atlas_name,
+			'feature':feature_name,
+			'dynamic':'false',
+		}
+		return static_document
 
-	def generate_static_document(self, subject_scan, atlas_name, feature_name, value):
+	def generate_dynamic_query(self, subject_scan, atlas_name, feature_name, window_lenth, step_size):
+		dynamic_document = {
+			'scan':subject_scan,
+			'atlas':atlas_name,
+			'feature':feature_name,
+			'dynamic':'true',
+			'window length': window_lenth,
+			'step size': step_size,
+		}
+		return dynamic_document
+	def generate_static_document(self, subject_scan, atlas_name, feature_name, value = '', comment = ''):
 		static_document = {
 			'scan':subject_scan,
 			'atlas':atlas_name,
 			'feature':feature_name,
 			'dynamic':'false',
 			'value':value,
-			'comment':''
+			'comment':comment
 		}
 		return static_document
 
-	def generate_dynamic_document(self, subject_scan, atlas_name, feature_name, value):
+	def generate_dynamic_document(self, subject_scan, atlas_name, feature_name, window_lenth, step_size, value, comment = ''):
 		dynamic_document = {
 			'scan':subject_scan,
 			'atlas':atlas_name,
 			'feature':feature_name,
 			'dynamic':'true',
-			'window length': 22,
-			'step size': 1, 
+			'window length': window_lenth,
+			'step size': step_size,
 			'value':value,
-			'commment':''
+			'commment':comment
 		}
 		return dynamic_document
 

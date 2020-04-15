@@ -10,7 +10,6 @@ import os
 import pickle
 import numpy as np
 from mmdps.proc import netattr , atlas
-from threading import Thread
 
 class RedisDatabase:
 	"""
@@ -48,28 +47,41 @@ class RedisDatabase:
 			#self.flushall()
 			os.system("e:/redis/redis-server --service-stop")
 		print("redis has been stopped")
-	#待重写
 	#set value
-	def set_value(self,subject_scan, atlas_name, feature_name, isdynamic, value , window_length = 0 , step_size = 0, no = 1):
+	def set_value(self, obj):
 		rdb = Redis(connection_pool=self.data_pool)
-		if isdynamic == False:
-			rdb.set(self.generate_static_key(subject_scan, atlas_name, feature_name) , value, ex=1800)
-		else:
-			rdb.set(self.generate_dynamic_key(subject_scan, atlas_name, feature_name, window_length, step_size) + str(no), value, ex=1800)
-		print('The key has been successfully inserted into redis')
+		if type(obj) is dict:
+			if (obj['dynamic']) == 'false':
+				key = self.generate_static_key(obj['scan'], obj['atlas'], obj['feature'])
+				rdb.set(key, obj['value'], ex=1800)
+			else:
+				key = self.generate_dynamic_key(obj['scan'], obj['atlas'], obj['feature'],obj['window length'], obj['step size']) + ':' + obj['no']
+				rdb.set(key, obj['value'], ex=1800)
+		elif type(obj) is netattr.Net:
+			key = self.generate_static_key(obj.name, obj.atlasobj.name, 'bold_net')
+			rdb.set(key, pickle.dumps(obj.data))
+		elif type(obj) is netattr.Attr:
+			key = self.generate_static_key(obj.name, obj.atlasobj.name, obj.attr_name)
+			rdb.set(key, pickle.dumps(obj.data))
+		elif type(obj) is netattr.DynamicNet:
+			key = self.generate_dynamic_key(obj.name, obj.atlasobj.name, 'bold_net', obj.windowLength, obj.stepSize)
+			rdb.set(key, pickle.dumps(obj.data))
+		elif type(obj) is netattr.DynamicAttr:
+			key = self.generate_dynamic_key(obj.name, obj.atlasobj.name, obj.attr_name, obj.windowLength, obj.stepSize)
+			rdb.set(key, pickle.dumps(obj.data))
 
 	def generate_static_key(self, subject_scan, atlas_name, feature_name):
 		key = subject_scan + ':' + atlas_name + ':' + feature_name +':0'
 		return key
 
 	def generate_dynamic_key(self, subject_scan, atlas_name, feature_name, window_length, step_size):
-		key = subject_scan + ':' + atlas_name + ':' + feature_name +':1:'+ str(window_length) + str(step_size)
+		key = subject_scan + ':' + atlas_name + ':' + feature_name +':1:'+ str(window_length) + ':' + str(step_size)
 		return key
 
 	#get value
 	def get_values(self, subject_scan, atlas_name = '', feature_name = '', isdynamic = False, window_length = 0, step_size = 0):
 		#Invalid input check
-		if type(atlas_name) is str and type(feature_name) is str and type(window_length) is int and type(step_size) is int:
+		if type(atlas_name) is str and type(feature_name) is str and type(subject_scan) is str:
 			if isdynamic == False:
 				res = self.get_static_value(subject_scan, atlas_name, feature_name)
 			else:
@@ -94,7 +106,7 @@ class RedisDatabase:
 			return self.get_static_values(scan, atlas, feature)
 		else:
 			#动态查询是否需要支持批量查询,暂时不支持
-			return self.get_dynamic_values(scan, atlas, feature, window, step)
+			return self.get_dynamic_values(scan, atlas, feature, window_length, step_size)
 
 	def get_static_values(self, subject_scan, atlas_name, feature_name):
 		lst=[]
@@ -110,8 +122,8 @@ class RedisDatabase:
 		res=rdb.get(key)
 		rdb.expire(key,1800)
 		if not res:
-			if self.mdb.exists_static(subject_scan, atlas_name, feature_name):
-				doc=self.mdb.query_static(subject_scan, atlas_name , feature_name)
+			doc = self.mdb.query_static(subject_scan, atlas_name, feature_name)
+			if doc.count()!=0:
 				rdb.set(self.generate_static_key(doc[0]['scan'],doc[0]['atlas'],doc[0]['feature']), (doc[0]['value']), ex=1800)
 				return self.trans_netattr(doc[0]['scan'], doc[0]['atlas'], doc[0]['feature'],pickle.loads(doc[0]["value"]))
 			else:
@@ -139,21 +151,37 @@ class RedisDatabase:
 	def get_dynamic_value(self, subject_scan, atlas_name, feature_name, window_length, step_size):
 		rdb = Redis(connection_pool=self.data_pool)
 		key_all = self.generate_dynamic_key(subject_scan, atlas_name, feature_name, window_length, step_size)
-		if rdb.exists(key_all+':0'):
-			rdb.expire(key_all+':0', 1800)
-			pass
+		if rdb.exists(key_all + ':0'):
+			pipe = rdb.pipeline()
+			pipe.multi()
+			len = int(rdb.get(key_all + ':0').decode())
+			for i in range(1,len + 1,1):
+				pipe.get(key_all + ':' + str(i))
+			res = pipe.execute()
+			value = []
+			for i in range(len):
+				value.append(pickle.loads(res[i]))
+				pipe.expire(key_all + ':' + str(i+1), 1800)
+			pipe.expire(key_all + ':0', 1600)
+			pipe.execute()
+			return self.trans_dynamic_netattr(subject_scan, atlas_name, feature_name, window_length, step_size, np.array(value))
 		else:
-			if self.mdb.exists_dynamic(subject_scan, atlas_name, feature_name, window_length, step_size):
-				doc = self.mdb.query_dynamic(subject_scan, atlas_name, feature_name, window_length, step_size)
-				for j in doc: #使用查询关键字保证圣升序
-					#pipeline改进
-					rdb.set(self.generate_dynamic_key(j['scan'], j['atlas'], j['feature'], j['window length'], j['step size'],j["no"]), (j['value']), ex=1800)
-					pass
+			doc = self.mdb.query_dynamic(subject_scan, atlas_name, feature_name, window_length, step_size)
+			if doc.count()!=0: #待重写
+				len = 0
+				value = []
+				pipe = rdb.pipeline()
+				pipe.multi()
+				for j in doc: #使用查询关键字保证升序
+					len = len + 1
+					pipe.set(key_all + ':' + str(len), (j['value']), ex=1800)
+					value.append(pickle.loads(j['value']))
+				pipe.set(key_all + ':0', len, ex=1600)
+				pipe.execute()
+				return self.trans_dynamic_netattr(subject_scan, atlas_name, feature_name, window_length, step_size, np.array(value))
 			else:
-				print("Can't find the key: %s you look for" % key)
+				print("Can't find the key: %s you look for" % key_all)
 				return None
-		return lst
-	#待重写
 	def trans_dynamic_netattr(self, subject_scan, atlas_name, feature_name, window_length, step_size, value):
 		if feature_name not in ['dwi_net', 'bold_net']:  # 这里要改一下
 			arr = netattr.DynamicAttr(value, atlas.get(atlas_name), window_length, step_size, subject_scan, feature_name)
