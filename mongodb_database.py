@@ -45,18 +45,15 @@ class MongoDBDatabase:
 		self.temp_collection = self.temp_db['Temp-collection']
 
 	def query_static(self, subject_scan, atlas_name, feature_name):
-		self.col = self.db['features']
-		m_query = self.generate_static_query(subject_scan, atlas_name, feature_name)
-		return self.col.find_one(m_query)
+		static_query= self.generate_static_query(subject_scan, atlas_name, feature_name)
+		return self.db['features'].find(static_query)
 
-	def query_dynamic(self, subject_scan, atlas_name, feature_name, window_lenth, step_size):
-		self.col = self.db['dynamic_data']
-		m_query = self.generate_dynamic_query(subject_scan, atlas_name, feature_name, window_lenth, step_size)
-		return self.col.find(m_query).sort("no", 1)
+	def query_dynamic(self, subject_scan, atlas_name, feature_name,window_length,step_size):
+		dynamic_query = self.genarate_dynamic_query(subject_scan, atlas_name, feature_name,window_length,step_size)
+		return self.db['dynamic_data'].find(dynamic_query).sort("no", 1)
 
-	def exists_static(self, subject_scan, atlas_name, feature_name):
-		self.col = self.db['features']
-		return self.col.count_documents(self.generate_static_query(subject_scan, atlas_name, feature_name))
+	def exist_static(self, subject_scan, atlas_name, feature_name):
+		return self.db['features'].count_documents(self.generate_static_query(subject_scan, atlas_name, feature_name))
 
 	def exists_dynamic(self, subject_scan, atlas_name, feature_name, window_lenth, step_size):
 		self.col = self.db['dynamic_data']
@@ -117,7 +114,7 @@ class MongoDBDatabase:
 		feature could be netattr.Net or netattr.Attr
 		"""
 		# check if feature already exist
-		if self.exists_static(feature.scan, feature.atlasobj.name, feature.feature_name):
+		if self.exist_static(feature.scan, feature.atlasobj.name, feature.feature_name):
 			raise MultipleRecordException(feature.scan, 'Please check again.')
 		attrdata = pickle.dumps(feature.data)
 		self.col = self.db['features']
@@ -132,7 +129,7 @@ class MongoDBDatabase:
 
 	def get_attr(self, subject_scan, atlas_name, feature_name):
 		#directly return to an attrobj
-		if self.exists_static(subject_scan,atlas_name,feature_name):
+		if self.exist_static(subject_scan,atlas_name,feature_name):
 			binary_data = self.query_static(subject_scan, atlas_name, feature_name)['value']
 			attrdata = pickle.loads(binary_data)
 			atlasobj = atlas.get(atlas_name)
@@ -143,7 +140,7 @@ class MongoDBDatabase:
 			return None
 
 	def get_net(self, subject_scan, atlas_name, feature_name = 'BOLD.net'):
-		if self.exists_static(subject_scan, atlas_name, feature_name = 'BOLD.net'):
+		if self.exist_static(subject_scan, atlas_name, feature_name = 'BOLD.net'):
 			binary_data = self.query_static(subject_scan, atlas_name, feature_name = 'BOLD.net')['value']
 			netdata = pickle.loads(binary_data)
 			atlasobj = atlas.get(atlas_name)
