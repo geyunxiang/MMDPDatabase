@@ -68,6 +68,15 @@ class MMDBDatabase:
 		"""
 		pass
 
+	def get_study(self, alias):
+		# TODO: input part of alias and search automatically
+		return self.sdb.getResearchStudy(alias)
+
+	def get_group(self, group_name):
+		# TODO: input part of group_name and search automatically
+		session = self.sdb.new_session()
+		return session.query(tables.Group).filter_by(name = group_name).one()
+
 
 class SQLiteDB:
 	"""
