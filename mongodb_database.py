@@ -9,7 +9,7 @@ static
 	"scan": "baihanxiang_20190211",
 	"atlas": "brodmann_lrce",
 	"feature": "BOLD.inter.BC",
-	"dynamic": false,
+	"dynamic": 0,
 	"value": "...actual csv str...",
 	"comment": "...descriptive str..."
 }
@@ -19,9 +19,9 @@ dynamic
 	"scan": "CMSA_01",
 	"atlas": "brodmann_lrce", 
 	"feature": "BOLD.inter.BC",
-	"dynamic": true, 
-	"window length": 22,
-	"step size": 1, 
+	"dynamic": 1, 
+	"WindowLength": 22,
+	"StepSize": 1, 
 	"value": "...actual csv str...",
 	"comment": "...descriptive str..."
 }
@@ -45,67 +45,43 @@ class MongoDBDatabase:
 		self.temp_collection = self.temp_db['Temp-collection']
 
 	def generate_static_query(self, subject_scan, atlas_name, feature_name):
-		static_query={
-			'scan':subject_scan,
-			'atlas':atlas_name,
-			'feature':feature_name,
-			'dynamic':'false'
-		}
+		static_query=dict(scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=0)
 		return static_query
 
 	def genarate_dynamic_query(self, subject_scan, atlas_name, feature_name,window_length,step_size):
-		dynamic_query={
-			'scan':subject_scan,
-			'atlas':atlas_name,
-			'feature':feature_name,
-			'dynamic':'true',
-			'window length':window_length,
-			'step size':step_size
-		}
+		dynamic_query=dict(scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=1,WindowLength=window_length,StepSize=step_size)
 		return dynamic_query
 
 	def query_static(self, subject_scan, atlas_name, feature_name):
 		static_query= self.generate_static_query(subject_scan, atlas_name, feature_name)
-		return self.db['features'].find(static_query)
+		self.col=self.db['features']
+		return self.col.find(static_query)
 
 	def query_dynamic(self, subject_scan, atlas_name, feature_name,window_length,step_size):
 		dynamic_query = self.genarate_dynamic_query(subject_scan, atlas_name, feature_name,window_length,step_size)
-		return self.db['dynamic_data'].find(dynamic_query).sort("no",1)
+		self.col=self.db['dynamic_data']
+		return self.col.find(dynamic_query).sort("no",1)
 
 	def exist_static(self, subject_scan, atlas_name, feature_name):
-		return self.db['features'].count_documents(self.generate_static_query(subject_scan, atlas_name, feature_name))
+		self.col=self.db['features']
+		return self.col.count_documents(self.generate_static_query(subject_scan, atlas_name, feature_name))
 
 	def exist_dynamic(self, subject_scan, atlas_name, feature_name,window_length,step_size):
-		return self.db['dynamic_data'].count_documents(self.genarate_dynamic_query(subject_scan, atlas_name, feature_name,window_length,step_size))
+		self.col=self.db['dynamic_data']
+		return self.col.count_documents(self.genarate_dynamic_query(subject_scan, atlas_name, feature_name,window_length,step_size))
 
 	def generate_static_document(self, subject_scan, atlas_name, feature_name, value):
-		static_document = {
-			'scan':subject_scan,
-			'atlas':atlas_name,
-			'feature':feature_name,
-			'dynamic':'false',
-			'value':value,
-			'comment':''
-		}
+		static_document=dict(scan=subject_scan,atlas=atlas_name,feature=feature_name,value=value,dynamic='false',comment='')
 		return static_document
 
-	def generate_dynamic_document(self, subject_scan, atlas_name, feature_name, value):
-		dynamic_document = {
-			'scan':subject_scan,
-			'atlas':atlas_name,
-			'feature':feature_name,
-			'dynamic':'true',
-			'window length': 22,
-			'step size': 1, 
-			'value':value,
-			'commment':''
-		}
+	def generate_dynamic_document(self, subject_scan, atlas_name, feature_name, value, window_length, step_size):
+		dynamic_document=dict(scan=subject_scan,atlas=atlas_name,feature=feature_name,value=value,dynamic=1,WindowLength=window_length,StepSize=step_size,comment='')
 		return dynamic_document
 
 	def generate_dynamic_database(self, subject_scan, atlas_name, feature_name, value):
 		#目前不知道动态数据的具体目录结构
 		self.col = self.db['dynamic_data']
-		self.col.insert_one(self.generate_dynamic_document(subject_scan, atlas_name, feature_name, value))
+		#self.col.insert_one(self.generate_dynamic_document(subject_scan, atlas_name, feature_name, value))
 		#mongodb直接读取特征？
 
 	def save_static_feature(self, feature):
