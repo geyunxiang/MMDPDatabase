@@ -163,12 +163,29 @@ def pipe_safety_test():
         pipe.set(str(i),str(i))
     print('OK')
     pipe.execute()
+def error_fun_test():
+    try:
+        error_test()
+    except Exception as e:
+        print(e)
+
+
 def error_test():
+    r = redis.StrictRedis(host='localhost', port=6379, db=15)
+    try:
+        pipe = r.pipeline()
+        pipe.multi()
+        pipe.set('1','1')
+        pipe.execute_command('lalala')
+        pipe.execute()
+    except Exception as e:
+        print(type(e))
+        return(e)
 
 if __name__ == '__main__':
     #Inimongodb()
     #float_test()
-    a=RedisDatabase()
+    error_test()
     #a.get_static_value()
     #redis_speed_test()
     #monggo_speed_test()
@@ -179,4 +196,4 @@ if __name__ == '__main__':
     #Inimongodb_dynamic()
     #dynamic_test()
     #pipe_safety_test()
-    print(a.exists_key('baihanxiang_20190307','aal','bold_interBC'))
+    #print(a.exists_key('baihanxiang_20190307','aal','bold_interBC'))

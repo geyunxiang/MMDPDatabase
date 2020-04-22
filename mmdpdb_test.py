@@ -17,4 +17,4 @@ STEP_SIZE=[1,3]
 
 if __name__ == '__main__':
     a = mmdpdb.MMDBDatabase()
-    a.get_dynamic_feature(DTNAMIC_SCAN,"brodmann_lrce",'bold_net',22,1)
+    a.get_dynamic_feature(DTNAMIC_SCAN,'brodmann_lrce','bold_net',22,1)

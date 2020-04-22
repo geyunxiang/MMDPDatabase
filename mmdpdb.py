@@ -10,15 +10,15 @@ mmdpdb is the database of MMDPS, containing 3 databased.
 """
 import os
 
-#from sqlalchemy import create_engine, exists, and_
-#from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, exists, and_
+from sqlalchemy.orm import sessionmaker
 
-#from sqlalchemy.orm.exc import MultipleResultsFound
+from sqlalchemy.orm.exc import MultipleResultsFound
 
 from mmdps.proc import atlas
-#from mmdps.dms import tables
-#from mmdps.util import loadsave, clock
-#from mmdps import rootconfig
+from mmdps.dms import tables
+from mmdps.util import loadsave, clock
+from mmdps import rootconfig
 
 import mongodb_database, redis_database
 
@@ -47,8 +47,8 @@ class MMDBDatabase:
 				if doc.count() != 0:
 					ret_list.append(self.rdb.set_value(doc[0]))
 				else:
-					#error handling
-					pass
+					e = Exception('No such item in redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name)
+					print(e)
 		if return_single:
 			return ret_list[0]
 		else:
@@ -64,15 +64,21 @@ class MMDBDatabase:
 		ret_list = []
 		for scan in scan_list:
 			res = self.rdb.get_dynamic_value(scan, atlasobj, feature_name, window_length, step_size)
+			if type(res) is Exception:
+				raise res
 			if res != None:
 				ret_list.append(res)
 			else:
 				doc = self.mdb.query_dynamic(scan, atlasobj, feature_name, window_length, step_size)
 				if doc.count() != 0:
-					ret_list.append(self.rdb.set_value(doc))
+					mat = self.rdb.set_value(doc)
+					if type(mat) is Exception:
+						raise mat
+					ret_list.append(mat)
 				else:
-					# error handling
-					pass
+					e = Exception('No such item in redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name +' '+
+								 ' '+ str(window_length) +' '+ str(step_size))
+					print(e)
 		if return_single:
 			return ret_list[0]
 		else:
@@ -96,7 +102,6 @@ class MMDBDatabase:
 		"""
 		pass
 
-	'''
 class SQLiteDB:
 	"""
 	SQLite stores meta-info like patient information, scan date, group
@@ -261,4 +266,3 @@ class SQLiteDB:
 		db_scan = session.query(tables.MRIScan).filter_by(filename = mriscanFilename).one()
 		session.delete(db_scan)
 		session.commit()
-	'''

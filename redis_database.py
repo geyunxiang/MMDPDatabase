@@ -22,7 +22,6 @@ class RedisDatabase:
 	def is_redis_running(self):
 		try:
 			process = len(os.popen('tasklist | findstr ' + "redis-server.exe").readlines())
-			print('redis state : %s' % process)
 			if process >= 1:
 				return True
 			else:
@@ -63,14 +62,16 @@ class RedisDatabase:
 			step_size = obj[0]['step size']
 			key_all = self.generate_dynamic_key(scan, atlas, feature, window_length, step_size)
 			pipe = rdb.pipeline()
-			pipe.multi()
-			for j in obj:  # 使用查询关键字保证升序
-				len = len + 1
-				pipe.set(key_all + ':' + str(len), (j['value']), ex=1800)
-				value.append(pickle.loads(j['value']))
-			pipe.set(key_all + ':0', len, ex=1600)
-			pipe.execute()
-			#error handling
+			try:
+				pipe.multi()
+				for j in obj:  # 使用查询关键字保证升序
+					len = len + 1
+					pipe.set(key_all + ':' + str(len), (j['value']), ex=1800)
+					value.append(pickle.loads(j['value']))
+				pipe.set(key_all + ':0', len, ex=1600)
+				pipe.execute()
+			except Exception as e:
+				return e
 			return self.trans_dynamic_netattr(scan, atlas, feature, window_length, step_size, np.array(value))
 		elif type(obj) is netattr.Net:
 			key = self.generate_static_key(obj.name, obj.atlasobj.name, 'bold_net')
@@ -120,20 +121,24 @@ class RedisDatabase:
 		key_all = self.generate_dynamic_key(subject_scan, atlas_name, feature_name, window_length, step_size)
 		if rdb.exists(key_all + ':0'):
 			pipe = rdb.pipeline()
-			pipe.multi()
-			len = int(rdb.get(key_all + ':0').decode())
-			for i in range(1,len + 1,1):
-				pipe.get(key_all + ':' + str(i))
-			res = pipe.execute()
-			#error handling
-			pipe.multi()
-			value = []
-			for i in range(len):
-				value.append(pickle.loads(res[i]))
-				pipe.expire(key_all + ':' + str(i+1), 1800)
-			pipe.expire(key_all + ':0', 1600)
-			pipe.execute()
-			#error handling
+			try:
+				pipe.multi()
+				len = int(rdb.get(key_all + ':0').decode())
+				for i in range(1,len + 1,1):
+					pipe.get(key_all + ':' + str(i))
+				res = pipe.execute()
+			except Exception as e:
+				return e
+			try:
+				pipe.multi()
+				value = []
+				for i in range(len):
+					value.append(pickle.loads(res[i]))
+					pipe.expire(key_all + ':' + str(i+1), 1800)
+				pipe.expire(key_all + ':0', 1600)
+				pipe.execute()
+			except Exception as e:
+				return e
 			return self.trans_dynamic_netattr(subject_scan, atlas_name, feature_name, window_length, step_size, np.array(value))
 		else:
 			return None
