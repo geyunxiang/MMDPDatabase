@@ -64,7 +64,7 @@ class MongoDBDatabase:
 			'scan':subject_scan,
 			'atlas':atlas_name,
 			'feature':feature_name,
-			'dynamic':'false',
+			'dynamic':0,
 		}
 		return static_document
 
@@ -73,7 +73,7 @@ class MongoDBDatabase:
 			'scan':subject_scan,
 			'atlas':atlas_name,
 			'feature':feature_name,
-			'dynamic':'true',
+			'dynamic':1,
 			'window length': window_lenth,
 			'step size': step_size,
 		}

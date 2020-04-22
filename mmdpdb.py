@@ -8,6 +8,7 @@ mmdpdb is the database of MMDPS, containing 3 databased.
 	2. MongoDB keeps all extracted features like networks
 	   and attributes. 
 	3. Redis is a high-speed cache that starts up upon request. 
+
 """
 import os
 
@@ -30,25 +31,59 @@ class MMDBDatabase:
 		self.sdb = SQLiteDB()
 
 	def get_feature(self, scan_list, atlasobj, feature_name, data_source = 'Changgung'):
+		#wrong input check
 		return_single = False
 		if type(scan_list) is str:
 			scan_list = [scan_list]
 			return_single = True
-		if type(atlasobj) is str:
-			atlasobj = atlas.get(atlasobj)
+		if type(atlasobj) is atlas.Atlas:
+			atlasobj = atlasobj.name
 		ret_list = []
 		for scan in scan_list:
-			# TODO: implement this
-			# get data from Redis/MongoDB, store data in Redis, set timeout etc.
-			ret_list.append(self.rdb.get(scan, atlasobj, feature_name))
-			ret_list.append(netattr.Net(..))
+			res = self.rdb.get_static_value(scan, atlasobj, feature_name)
+			if res != None:
+				ret_list.append(res)
+			else:
+				doc = self.mdb.query_static(scan, atlasobj, feature_name)
+				if doc.count() != 0:
+					ret_list.append(self.rdb.set_value(doc[0]))
+				else:
+					e = Exception('No such item in redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name)
+					print(e)
 		if return_single:
 			return ret_list[0]
 		else:
 			return ret_list
 
 	def get_dynamic_feature(self, scan_list, atlasobj, feature_name, window_length, step_size, data_source = 'Changgung'):
-		pass
+		return_single = False
+		if type(scan_list) is str:
+			scan_list = [scan_list]
+			return_single = True
+		if type(atlasobj) is atlas.Atlas:
+			atlasobj = atlasobj.name
+		ret_list = []
+		for scan in scan_list:
+			res = self.rdb.get_dynamic_value(scan, atlasobj, feature_name, window_length, step_size)
+			if type(res) is Exception:
+				raise res
+			if res != None:
+				ret_list.append(res)
+			else:
+				doc = self.mdb.query_dynamic(scan, atlasobj, feature_name, window_length, step_size)
+				if doc.count() != 0:
+					mat = self.rdb.set_value(doc)
+					if type(mat) is Exception:
+						raise mat
+					ret_list.append(mat)
+				else:
+					e = Exception('No such item in redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name +' '+
+								 ' '+ str(window_length) +' '+ str(step_size))
+					print(e)
+		if return_single:
+			return ret_list[0]
+		else:
+			return ret_list
 
 	def get_temp_feature(self, feature_collection, feature_name):
 		pass
@@ -170,7 +205,7 @@ class SQLiteDB:
 
 	def newGroupByNames(self, groupName, nameList, scanNum, desc = None, accumulateScan = False):
 		"""
-		Initialize a group by a list of names. The scans are generated automatically. 
+		Initialize a group by a list of names. The scans are generated automatically.
 		scanNum - which scan (first/second/etc)
 		accumulateScan - whether keep former scans in this group
 		"""
