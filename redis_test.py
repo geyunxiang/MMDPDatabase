@@ -7,8 +7,9 @@ import pickle
 import time
 from redis_database import RedisDatabase
 from mongodb_database import MongoDBDatabase
-from mmdps.proc import netattr , atlas, loader
+from mmdps.proc import netattr, atlas, loader
 from mmdps import rootconfig
+
 
 SCAN =['baihanxiang_20190307','caipinrong_20180412','baihanxiang_20190211','caochangsheng_20161027',
        'caochangsheng_20161114','chenguwen_20150711','chenhua_20150711','chenyifan_20150612',
@@ -37,7 +38,7 @@ def Inimongodb():#实验用mongodb数据库
                 path = r'E:\Features' + '\\' + i + '\\' + j + '\\' + k + '.csv'  # 路径可以自己改
                 if os.path.exists(path):
                     arr = np.loadtxt(path,delimiter=',')
-                    mydict = {'scan': i, 'atlas': j, 'feature': k, 'dynamic': 'false', 'value': pickle.dumps(arr)}
+                    mydict = {'scan': i, 'atlas': j, 'feature': k, 'dynamic': 0, 'value': pickle.dumps(arr)}
                     x = mycol.insert_one(mydict)
 def Inimongodb_dynamic():
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -54,7 +55,7 @@ def Inimongodb_dynamic():
                                 path = r'E:\Features' + '\\' + i + '\\' + 'brodmann_lrce' + '\\' + j + '\\' + 'dynamic ' + str(l) + ' ' + str(k) + '\\' + 'inter-region_bc-' + str(n * l) + '.' + str(k + n * l) + '.csv'
                             if os.path.exists(path):
                                 arr = np.loadtxt(path, delimiter=',')
-                                mydict = {'scan':i,'atlas':'brodmann_lrce','feature':j,'dynamic':'true','window length':k,'step size':l,'no':n,'value':pickle.dumps(arr)}
+                                mydict = {'scan':i,'atlas':'brodmann_lrce','feature':j,'dynamic':1,'window length':k,'step size':l,'no':n,'value':pickle.dumps(arr)}
                                 x = mycol.insert_one(mydict)
                             else:
                                 break
@@ -167,7 +168,7 @@ def loader_speed_test_attr():
 def size_test():
     rdb = redis.Redis(host='127.0.0.1', port=6379, db=15)
     N=1
-    while (N<10000000):
+    while (N<1000):
         N=N*10
         rdb.delete('size')
         a=''
@@ -233,16 +234,39 @@ def pipe_test():
     lst.append(pipe.execute())
     print(lst)
 
+def pipe_safety_test():
+    r = redis.StrictRedis(host='localhost', port=6379, db=15)
+    pipe = r.pipeline()
+    lst=[]
+    pipe.multi()
+    for i in range(1000000):
+        pipe.set(str(i),str(i))
+    print('OK')
+    pipe.execute()
+def error_fun_test():
+    try:
+        error_test()
+    except Exception as e:
+        print(e)
+
+
+def error_test():
+    r = redis.StrictRedis(host='localhost', port=6379, db=15)
+    try:
+        pipe = r.pipeline()
+        pipe.multi()
+        pipe.set('1','1')
+        pipe.execute_command('lalala')
+        pipe.execute()
+    except Exception as e:
+        print(type(e))
+        return(e)
+
 if __name__ == '__main__':
     #Inimongodb()
     #float_test()
-    # a=RedisDatabase()
-    # a.get_values(SCAN,ATLAS,FEATURE)
-    # redis_speed_test_network()
-    # mongo_speed_test_network()
-    loader_speed_test_attr()
-    #a=RedisDatabase()
-    #a.get_values(SCAN,ATLAS,FEATURE)
+    error_test()
+    #a.get_static_value()
     #redis_speed_test()
     #monggo_speed_test()
     #loader_speed_test()
@@ -250,4 +274,6 @@ if __name__ == '__main__':
     #save_test()
     #nptest()
     #Inimongodb_dynamic()
-    dynamic_test()
+    #dynamic_test()
+    #pipe_safety_test()
+    #print(a.exists_key('baihanxiang_20190307','aal','bold_interBC'))

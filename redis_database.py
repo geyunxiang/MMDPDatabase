@@ -4,9 +4,9 @@ Redis is a high-speed high-performance cache database.
 A Redis database would be created on-the-fly and (possibly)
 destroyed after usage.
 """
-import mongodb_database
 from redis import ConnectionPool, Redis
 import os, sys
+import pymongo
 import pickle
 import numpy as np
 from mmdps.proc import netattr , atlas
@@ -18,7 +18,6 @@ class RedisDatabase:
 
 	def __init__(self, password = ""):
 		self.start_redis()
-		self.mdb = mongodb_database.MongoDBDatabase(password = password)
 
 	def is_redis_running(self):
 		if sys.platform == 'win32':
@@ -68,16 +67,35 @@ class RedisDatabase:
 			else:
 				pass
 		print("redis has been stopped")
+	
 	#set value
 	def set_value(self, obj):
 		rdb = Redis(connection_pool=self.data_pool)
 		if type(obj) is dict:
-			if (obj['dynamic']) == 'false':
-				key = self.generate_static_key(obj['scan'], obj['atlas'], obj['feature'])
-				rdb.set(key, obj['value'], ex=1800)
-			else:
-				key = self.generate_dynamic_key(obj['scan'], obj['atlas'], obj['feature'],obj['window length'], obj['step size']) + ':' + obj['no']
-				rdb.set(key, obj['value'], ex=1800)
+			key = self.generate_static_key(obj['scan'], obj['atlas'], obj['feature'])
+			rdb.set(key, obj['value'], ex=1800)
+			return self.trans_netattr(obj['scan'], obj['atlas'], obj['feature'], pickle.loads(obj['value']))
+		elif type(obj) is pymongo.cursor.Cursor:
+			len = 0
+			value = []
+			scan = obj[0]['scan']
+			atlas = obj[0]['atlas']
+			feature = obj[0]['feature']
+			window_length = obj[0]['window length']
+			step_size = obj[0]['step size']
+			key_all = self.generate_dynamic_key(scan, atlas, feature, window_length, step_size)
+			pipe = rdb.pipeline()
+			try:
+				pipe.multi()
+				for j in obj:  # 使用查询关键字保证升序
+					len = len + 1
+					pipe.set(key_all + ':' + str(len), (j['value']), ex=1800)
+					value.append(pickle.loads(j['value']))
+				pipe.set(key_all + ':0', len, ex=1600)
+				pipe.execute()
+			except Exception as e:
+				return e
+			return self.trans_dynamic_netattr(scan, atlas, feature, window_length, step_size, np.array(value))
 		elif type(obj) is netattr.Net:
 			key = self.generate_static_key(obj.name, obj.atlasobj.name, 'bold_net')
 			rdb.set(key, pickle.dumps(obj.data))
@@ -100,63 +118,15 @@ class RedisDatabase:
 		return key
 
 	#get value
-	def get_values(self, subject_scan, atlas_name = '', feature_name = '', isdynamic = False, window_length = 0, step_size = 0):
-		#Invalid input check
-		if type(atlas_name) is str and type(feature_name) is str and type(subject_scan) is str:
-			if isdynamic == False:
-				res = self.get_static_value(subject_scan, atlas_name, feature_name)
-			else:
-				res = self.get_dynamic_value(subject_scan, atlas_name, feature_name, window_length, step_size)
-			if res is None:
-				return None # hot fix result not found error
-			if len(res) == 1:
-				return res[0]
-			else:
-				return res
-		if type(subject_scan) is str:
-			scan = []
-			scan.append(subject_scan)
-		else:
-			scan = subject_scan
-		if type(atlas_name) is str:
-			atlas = []
-			atlas.append(atlas_name)
-		else:
-			atlas = atlas_name
-		if type(feature_name) is str:
-			feature = []
-			feature.append(feature_name)
-		else:
-			feature = feature_name
-		if isdynamic == False:
-			return self.get_static_values(scan, atlas, feature)
-		else:
-			#动态查询是否需要支持批量查询,暂时不支持
-			return self.get_dynamic_values(scan, atlas, feature, window_length, step_size)
-
-	def get_static_values(self, subject_scan, atlas_name, feature_name):
-		lst=[]
-		for i in subject_scan:
-			for j in atlas_name:
-				for k in feature_name:#pipeline改进
-					lst.append(self.get_static_value(i,j,k))
-		return lst
-
 	def get_static_value(self, subject_scan, atlas_name, feature_name):
 		rdb = Redis(connection_pool=self.data_pool)
-		key=self.generate_static_key(subject_scan, atlas_name , feature_name)
-		res=rdb.get(key)
-		rdb.expire(key,1800)
-		if not res:
-			doc = self.mdb.query_static(subject_scan, atlas_name, feature_name)
-			if doc.count()!=0:
-				rdb.set(self.generate_static_key(doc[0]['scan'],doc[0]['atlas'],doc[0]['feature']), (doc[0]['value']), ex=1800)
-				return self.trans_netattr(doc[0]['scan'], doc[0]['atlas'], doc[0]['feature'],pickle.loads(doc[0]["value"]))
-			else:
-				print("Can't find the key: %s you look for" % key)
-				return None
+		key = self.generate_static_key(subject_scan, atlas_name, feature_name)
+		res = rdb.get(key)
+		rdb.expire(key, 1800)
+		if res != None:
+			return self.trans_netattr(subject_scan, atlas_name, feature_name, pickle.loads(res))
 		else:
-			return self.trans_netattr(subject_scan, atlas_name, feature_name,pickle.loads(res))
+			return None
 
 	def trans_netattr(self,subject_scan , atlas_name, feature_name, value):
 		if feature_name not in ['dwi_net', 'bold_net']:  # 这里要改一下
@@ -166,48 +136,33 @@ class RedisDatabase:
 			net = netattr.Net(value, atlas.get(atlas_name), subject_scan)
 			return net
 
-	def get_dynamic_values(self,subject_scan, atlas_name, feature_name, window_length, step_size):
-		lst = []
-		for i in subject_scan:
-			for j in atlas_name:
-				for k in feature_name:#pipeline改进
-					lst.append(self.get_dynamic_value(i, j, k ,window_length, step_size))
-		return lst
-
 	def get_dynamic_value(self, subject_scan, atlas_name, feature_name, window_length, step_size):
 		rdb = Redis(connection_pool=self.data_pool)
 		key_all = self.generate_dynamic_key(subject_scan, atlas_name, feature_name, window_length, step_size)
 		if rdb.exists(key_all + ':0'):
 			pipe = rdb.pipeline()
-			pipe.multi()
-			len = int(rdb.get(key_all + ':0').decode())
-			for i in range(1,len + 1,1):
-				pipe.get(key_all + ':' + str(i))
-			res = pipe.execute()
-			value = []
-			for i in range(len):
-				value.append(pickle.loads(res[i]))
-				pipe.expire(key_all + ':' + str(i+1), 1800)
-			pipe.expire(key_all + ':0', 1600)
-			pipe.execute()
+			try:
+				pipe.multi()
+				len = int(rdb.get(key_all + ':0').decode())
+				for i in range(1,len + 1,1):
+					pipe.get(key_all + ':' + str(i))
+				res = pipe.execute()
+			except Exception as e:
+				return e
+			try:
+				pipe.multi()
+				value = []
+				for i in range(len):
+					value.append(pickle.loads(res[i]))
+					pipe.expire(key_all + ':' + str(i+1), 1800)
+				pipe.expire(key_all + ':0', 1600)
+				pipe.execute()
+			except Exception as e:
+				return e
 			return self.trans_dynamic_netattr(subject_scan, atlas_name, feature_name, window_length, step_size, np.array(value))
 		else:
-			doc = self.mdb.query_dynamic(subject_scan, atlas_name, feature_name, window_length, step_size)
-			if doc.count()!=0: #待重写
-				len = 0
-				value = []
-				pipe = rdb.pipeline()
-				pipe.multi()
-				for j in doc: #使用查询关键字保证升序
-					len = len + 1
-					pipe.set(key_all + ':' + str(len), (j['value']), ex=1800)
-					value.append(pickle.loads(j['value']))
-				pipe.set(key_all + ':0', len, ex=1600)
-				pipe.execute()
-				return self.trans_dynamic_netattr(subject_scan, atlas_name, feature_name, window_length, step_size, np.array(value))
-			else:
-				print("Can't find the key: %s you look for" % key_all)
-				return None
+			return None
+	
 	def trans_dynamic_netattr(self, subject_scan, atlas_name, feature_name, window_length, step_size, value):
 		if feature_name not in ['dwi_net', 'bold_net']:  # 这里要改一下
 			arr = netattr.DynamicAttr(value, atlas.get(atlas_name), window_length, step_size, subject_scan, feature_name)
@@ -215,6 +170,14 @@ class RedisDatabase:
 		else:
 			net = netattr.DynamicNet(value, atlas.get(atlas_name), window_length, step_size, subject_scan)
 			return net
+
+	#is exist
+	def exists_key(self, subject_scan, atlas_name, feature_name, isdynamic = False, window_length = 0, step_size = 0):
+		rdb = Redis(connection_pool=self.data_pool)
+		if isdynamic ==False:
+			return rdb.exists(self.generate_static_key(subject_scan, atlas_name, feature_name))
+		else:
+			return rdb.exists(self.generate_dynamic_key(subject_scan, atlas_name, feature_name, window_length, step_size) + ':0')
 
 	def set_list_all_cache(self,key,value):
 		rdb = Redis(connection_pool=self.cache_pool)
@@ -256,7 +219,37 @@ class RedisDatabase:
 
 if __name__ == '__main__':
 	pass
-
+	#get value
+	'''
+	def get_values(self, subject_scan, atlas_name = '', feature_name = '', isdynamic = False, window_length = 0, step_size = 0):
+		#Invalid input check
+		if type(atlas_name) is str and type(feature_name) is str and type(subject_scan) is str:
+			if isdynamic == False:
+				res = self.get_static_value(subject_scan, atlas_name, feature_name)
+			else:
+				res = self.get_dynamic_value(subject_scan, atlas_name, feature_name, window_length, step_size)
+			return res
+		if type(subject_scan) is str:
+			scan = []
+			scan.append(subject_scan)
+		else:
+			scan = subject_scan
+		if type(atlas_name) is str:
+			atlas = []
+			atlas.append(atlas_name)
+		else:
+			atlas = atlas_name
+		if type(feature_name) is str:
+			feature = []
+			feature.append(feature_name)
+		else:
+			feature = feature_name
+		if isdynamic == False:
+			return self.get_static_values(scan, atlas, feature)
+		else:
+			#动态查询是否需要支持批量查询,暂时不支持
+			return self.get_dynamic_values(scan, atlas, feature, window_length, step_size)
+		'''
 '''-------------------------Version 2--------------------------------------
 	def get_static_values2(self, subject_scan, atlas_name, feature_name):
 		keys=[]
