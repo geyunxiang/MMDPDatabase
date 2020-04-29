@@ -197,17 +197,17 @@ class RedisDatabase:
 		rdb = Redis(connection_pool=self.cache_pool)
 		return rdb.lrange(key, start, end)
 
-	def exists_key_cashe(self, key):
+	def exists_key_cache(self, key):
 		rdb = Redis(connection_pool=self.cache_pool)
 		return rdb.exists(key)
 
-	def delete_key_cashe(self, key):
+	def delete_key_cache(self, key):
 		rdb = Redis(connection_pool=self.cache_pool)
 		value = rdb.delete(key)
 		#rdb.save()
 		return value
 
-	def clear_cashe(self):
+	def clear_cache(self):
 		rdb = Redis(connection_pool=self.cache_pool)
 		rdb.flushdb()
 

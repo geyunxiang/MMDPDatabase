@@ -91,17 +91,37 @@ class MMDBDatabase:
 	def save_temp_feature(self, feature_collection, feature_name, value):
 		pass
 
+	def set_cache_list(self, cache_key, value):
+		"""
+		Store a list to redis as cache with cache_key
+		"""
+		self.rdb.set_list_all_cache(cache_key, value)
+
 	def append_cache_list(self, cache_key, value):
-		pass
+		"""
+		Append value to a list in redis with cache_key.
+		If the given key is empty in redis, a new list will be created.
+		"""
+		self.rdb.set_list_cache(cache_key, value)
 
 	def get_cache_list(self, cache_key):
-		pass
+		"""
+		Return a list with given cache_key in redis
+		"""
+		return self.rdb.get_list_cache(cache_key)
 
 	def save_cache_list(self, cache_key):
 		"""
-		save list from Redis to MongoDB
+		Save list from redis to MongoDB
 		"""
 		pass
+
+	def delete_cache_list(self, cache_key):
+		"""
+		Remove list from redis and mongo
+		"""
+		self.rdb.delete_key_cache(cache_key)
+		# TODO: delete the list from mongo
 
 	def get_study(self, alias):
 		# TODO: input part of alias and search automatically
