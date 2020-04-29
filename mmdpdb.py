@@ -40,16 +40,15 @@ class MMDBDatabase:
 			atlasobj = atlasobj.name
 		ret_list = []
 		for scan in scan_list:
-			res = self.rdb.get_static_value(scan, atlasobj, feature_name)
+			res = self.rdb.get_static_value(data_source, scan, atlasobj, feature_name)
 			if res != None:
 				ret_list.append(res)
 			else:
-				doc = self.mdb.query_static(scan, atlasobj, feature_name)
+				doc = self.mdb.query_static(data_source, scan, atlasobj, feature_name)
 				if doc.count() != 0:
-					ret_list.append(self.rdb.set_value(doc[0]))
+					ret_list.append(self.rdb.set_value(doc[0],data_source))
 				else:
-					e = Exception('No such item in redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name)
-					print(e)
+					raise Exception('No such item in redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name)
 		if return_single:
 			return ret_list[0]
 		else:
@@ -64,26 +63,21 @@ class MMDBDatabase:
 			atlasobj = atlasobj.name
 		ret_list = []
 		for scan in scan_list:
-			res = self.rdb.get_dynamic_value(scan, atlasobj, feature_name, window_length, step_size)
-			if type(res) is Exception:
-				raise res
+			res = self.rdb.get_dynamic_value(data_source, scan, atlasobj, feature_name, window_length, step_size)
 			if res != None:
 				ret_list.append(res)
 			else:
-				doc = self.mdb.query_dynamic(scan, atlasobj, feature_name, window_length, step_size)
+				doc = self.mdb.query_dynamic(data_source, scan, atlasobj, feature_name, window_length, step_size)
 				if doc.count() != 0:
-					mat = self.rdb.set_value(doc)
-					if type(mat) is Exception:
-						raise mat
+					mat = self.rdb.set_value(doc,data_source)
 					ret_list.append(mat)
 				else:
-					e = Exception('No such item in redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name +' '+
+					raise Exception('No such item in both redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name +' '+
 								 ' '+ str(window_length) +' '+ str(step_size))
-					print(e)
-		if return_single:
-			return ret_list[0]
-		else:
-			return ret_list
+			if return_single:
+				return ret_list[0]
+			else:
+				return ret_list
 
 	def get_temp_feature(self, feature_collection, feature_name):
 		pass
