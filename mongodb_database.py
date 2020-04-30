@@ -44,21 +44,27 @@ class MongoDBDatabase:
 		self.temp_db = self.client['Temp-database']
 		self.temp_collection = self.temp_db['Temp-collection']
 
-	def generate_static_query(self, subject_scan, atlas_name, feature_name):
-		static_query=dict(scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=0)
+	def generate_static_query(self, data_source, subject_scan, atlas_name, feature_name):
+		static_query=dict(datasource=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=0)
 		return static_query
 
-	def genarate_dynamic_query(self, subject_scan, atlas_name, feature_name,window_length,step_size):
-		dynamic_query=dict(scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=1,WindowLength=window_length,StepSize=step_size)
+	def genarate_dynamic_query(self, data_source, subject_scan, atlas_name, feature_name,window_length,step_size):
+		dynamic_query={
+			'scan' : subject_scan,
+			'atlas' : atlas_name,
+			'feature' :feature_name,
+			'dynamic' : 1,
+			'window length' : window_length,
+			'step size' :step_size}
 		return dynamic_query
 
-	def query_static(self, subject_scan, atlas_name, feature_name):
-		static_query= self.generate_static_query(subject_scan, atlas_name, feature_name)
+	def query_static(self, data_source, subject_scan, atlas_name, feature_name):
+		static_query= self.generate_static_query(data_source, subject_scan, atlas_name, feature_name)
 		self.col=self.db['features']
 		return self.col.find(static_query)
 
-	def query_dynamic(self, subject_scan, atlas_name, feature_name,window_length,step_size):
-		dynamic_query = self.genarate_dynamic_query(subject_scan, atlas_name, feature_name,window_length,step_size)
+	def query_dynamic(self, data_source, subject_scan, atlas_name, feature_name,window_length,step_size):
+		dynamic_query = self.genarate_dynamic_query(data_source, subject_scan, atlas_name, feature_name,window_length,step_size)
 		self.col=self.db['dynamic_data']
 		return self.col.find(dynamic_query).sort("no",1)
 
