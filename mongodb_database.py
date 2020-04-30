@@ -6,6 +6,7 @@ db server -> database -> collection -> record.
 The record looks like this:
 static
 {
+	"data_source: Changgung",
 	"scan": "baihanxiang_20190211",
 	"atlas": "brodmann_lrce",
 	"feature": "BOLD.inter.BC",
@@ -16,12 +17,13 @@ static
 
 dynamic
 {
+	"data_source:Changgung",
 	"scan": "CMSA_01",
 	"atlas": "brodmann_lrce", 
 	"feature": "BOLD.inter.BC",
 	"dynamic": 1, 
-	"WindowLength": 22,
-	"StepSize": 1, 
+	"window_length": 22,
+	"step_size": 1, 
 	"value": "...actual csv str...",
 	"comment": "...descriptive str..."
 }
@@ -37,45 +39,50 @@ class MongoDBDatabase:
 	docstring for MongoDBDatabase
 	"""
 
-	def __init__(self, host = 'localhost', port = 27017, db = 'TotalData', col = 'features', password = ''):
+	def __init__(self, host = 'localhost', port = 27017, db = 'ChangGeng', col = 'features', password = ''):
 		self.client = pymongo.MongoClient(host, port)
 		self.db = self.client[db]
 		self.col = self.db[col]
 		self.temp_db = self.client['Temp-database']
 		self.temp_collection = self.temp_db['Temp-collection']
 
-	def generate_static_query(self, subject_scan, atlas_name, feature_name):
-		static_query=dict(scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=0)
+	"""
+	default data_source/database : ChangGeng;
+	default collection : features;
+	"""
+
+	def generate_static_query(self,data_source ='Changgung',subject_scan, atlas_name, feature_name):
+		static_query=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=0)
 		return static_query
 
-	def genarate_dynamic_query(self, subject_scan, atlas_name, feature_name,window_length,step_size):
-		dynamic_query=dict(scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=1,WindowLength=window_length,StepSize=step_size)
+	def genarate_dynamic_query(self,data_source ='Changgung', subject_scan, atlas_name, feature_name,window_length,step_size):
+		dynamic_query=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=1,window_length=window_length,step_size=step_size)
 		return dynamic_query
 
-	def query_static(self, subject_scan, atlas_name, feature_name):
-		static_query= self.generate_static_query(subject_scan, atlas_name, feature_name)
+	def query_static(self,data_source ='Changgung',subject_scan, atlas_name, feature_name):
+		static_query= self.generate_static_query(data_source,subject_scan, atlas_name, feature_name)
 		self.col=self.db['features']
 		return self.col.find(static_query)
 
-	def query_dynamic(self, subject_scan, atlas_name, feature_name,window_length,step_size):
-		dynamic_query = self.genarate_dynamic_query(subject_scan, atlas_name, feature_name,window_length,step_size)
+	def query_dynamic(self,data_source ='Changgung',subject_scan, atlas_name, feature_name,window_length,step_size):
+		dynamic_query = self.genarate_dynamic_query(data_source,subject_scan, atlas_name, feature_name,window_length,step_size)
 		self.col=self.db['dynamic_data']
 		return self.col.find(dynamic_query).sort("no",1)
 
-	def exist_static(self, subject_scan, atlas_name, feature_name):
+	def exist_static(self,data_source='Changgung' ,subject_scan, atlas_name, feature_name):
 		self.col=self.db['features']
-		return self.col.count_documents(self.generate_static_query(subject_scan, atlas_name, feature_name))
+		return self.col.count_documents(self.generate_static_query(data_source,subject_scan, atlas_name, feature_name))
 
-	def exist_dynamic(self, subject_scan, atlas_name, feature_name,window_length,step_size):
+	def exist_dynamic(self,data_source='Changgung',subject_scan, atlas_name, feature_name,window_length,step_size):
 		self.col=self.db['dynamic_data']
-		return self.col.count_documents(self.genarate_dynamic_query(subject_scan, atlas_name, feature_name,window_length,step_size))
+		return self.col.count_documents(self.genarate_dynamic_query(data_source,subject_scan, atlas_name, feature_name,window_length,step_size))
 
-	def generate_static_document(self, subject_scan, atlas_name, feature_name, value):
-		static_document=dict(scan=subject_scan,atlas=atlas_name,feature=feature_name,value=value,dynamic='false',comment='')
+	def generate_static_document(self, data_source='Changgung',subject_scan, atlas_name, feature_name, value):
+		static_document=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,value=value,dynamic=0,comment='')
 		return static_document
 
-	def generate_dynamic_document(self, subject_scan, atlas_name, feature_name, value, window_length, step_size):
-		dynamic_document=dict(scan=subject_scan,atlas=atlas_name,feature=feature_name,value=value,dynamic=1,WindowLength=window_length,StepSize=step_size,comment='')
+	def generate_dynamic_document(self, data_source='Changgung',subject_scan, atlas_name, feature_name, value, window_length, step_size):
+		dynamic_document=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,value=value,dynamic=1,window_length=window_length,step_size=step_size,comment='')
 		return dynamic_document
 
 	def generate_dynamic_database(self, subject_scan, atlas_name, feature_name, value):
