@@ -38,7 +38,7 @@ def Inimongodb():#实验用mongodb数据库
                 path = r'E:\Features' + '\\' + i + '\\' + j + '\\' + k + '.csv'  # 路径可以自己改
                 if os.path.exists(path):
                     arr = np.loadtxt(path,delimiter=',')
-                    mydict = {'scan': i, 'atlas': j, 'feature': k, 'dynamic': 0, 'value': pickle.dumps(arr)}
+                    mydict = {'data_source': 'Changgung', 'scan': i, 'atlas': j, 'feature': k, 'dynamic': 0, 'value': pickle.dumps(arr)}
                     x = mycol.insert_one(mydict)
 def Inimongodb_dynamic():
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -55,7 +55,7 @@ def Inimongodb_dynamic():
                                 path = r'E:\Features' + '\\' + i + '\\' + 'brodmann_lrce' + '\\' + j + '\\' + 'dynamic ' + str(l) + ' ' + str(k) + '\\' + 'inter-region_bc-' + str(n * l) + '.' + str(k + n * l) + '.csv'
                             if os.path.exists(path):
                                 arr = np.loadtxt(path, delimiter=',')
-                                mydict = {'scan':i,'atlas':'brodmann_lrce','feature':j,'dynamic':1,'window length':k,'step size':l,'no':n,'value':pickle.dumps(arr)}
+                                mydict = {'data_source': 'Changgung','scan':i,'atlas':'brodmann_lrce','feature':j,'dynamic':1,'window length':k,'step size':l,'no':n,'value':pickle.dumps(arr)}
                                 x = mycol.insert_one(mydict)
                             else:
                                 break
@@ -259,13 +259,13 @@ def error_test():
         pipe.execute_command('lalala')
         pipe.execute()
     except Exception as e:
-        print(type(e))
+        print(e)
         return(e)
 
 if __name__ == '__main__':
-    #Inimongodb()
+    Inimongodb()
     #float_test()
-    error_test()
+    #error_test()
     #a.get_static_value()
     #redis_speed_test()
     #monggo_speed_test()
@@ -273,7 +273,7 @@ if __name__ == '__main__':
     #size_test()
     #save_test()
     #nptest()
-    #Inimongodb_dynamic()
+    Inimongodb_dynamic()
     #dynamic_test()
     #pipe_safety_test()
     #print(a.exists_key('baihanxiang_20190307','aal','bold_interBC'))

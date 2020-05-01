@@ -69,7 +69,7 @@ class MongoDBDatabase:
 		self.col=self.db['dynamic_data']
 		return self.col.find(dynamic_query).sort("no",1)
 
-	def exist_static(self,data_source='Changgung' ,subject_scan, atlas_name, feature_name):
+	def exist_static(self,data_source='Changgung', subject_scan, atlas_name, feature_name):
 		self.col=self.db['features']
 		return self.col.count_documents(self.generate_static_query(data_source,subject_scan, atlas_name, feature_name))
 

@@ -15,6 +15,18 @@ DTNAMIC_FEATURE=['bold_net','bold_net_attr']
 WINDOW_LENTH=[22,50,100]
 STEP_SIZE=[1,3]
 
+def test_cache():
+	db = mmdpdb.MMDBDatabase()
+	# db.append_cache_list('test cache float', 1.123)
+	# db.append_cache_list('test cache float', 2.234)
+	lst = db.get_cache_list('test cache float')
+	print(lst)
+
+def test_get_dynamic_feature():
+	a = mmdpdb.MMDBDatabase()
+	a.get_dynamic_feature(DTNAMIC_SCAN,'brodmann_lrce','bold_net',22,1)
+
 if __name__ == '__main__':
-    a = mmdpdb.MMDBDatabase()
-    a.get_dynamic_feature(DTNAMIC_SCAN,'brodmann_lrce','bold_net',22,1)
+	test_cache()
+	a = mmdpdb.MMDBDatabase()
+	a.get_dynamic_feature('CMSA_01','brodmann_lrce','bold_net',22,1)
