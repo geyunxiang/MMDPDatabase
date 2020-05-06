@@ -77,7 +77,7 @@ class MongoDBDatabase:
 		self.col=self.db['dynamic_data']
 		return self.col.count_documents(self.genarate_dynamic_query(data_source,subject_scan, atlas_name, feature_name,window_length,step_size))
 
-	def generate_static_document(self, data_source='Changgung',subject_scan, atlas_name, feature_name, value):
+	def generate_static_document(self, data_source ='Changgung',subject_scan, atlas_name, feature_name, value):
 		static_document=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,value=value,dynamic=0,comment='')
 		return static_document
 
@@ -105,6 +105,18 @@ class MongoDBDatabase:
 	def remove_static_feature(self, scan, atlas_name, feature_name):
 		self.col = self.db['features']
 		self.col.find_one_and_delete(self.generate_static_query(scan, atlas_name, feature_name))
+
+	def save_dynamic_attr(self,attr):
+		"""
+		attr is dynamic attr
+		"""
+		if self.exist_dynamic(attr.data_source,attr.scan ,attr.atlasobj.name,attr.feature_name,attr.window_length,attr.step_size):
+			raise MultipleRecordException(feature.scan, 'Please check again.')
+		self.col=self.db['dynamic_data']
+		for i in range(len(attr.data)):
+			attrdata=pickle.dumps(attr.data[i])
+			self.col.insert_one(self.generate_dynamic_document(attr.data_source,attr.scan,attr.atlasobj.name,attrdata,attr.feature_name,attr.window_length,attr.step_size))
+			
 
 	def get_atlasobj(self,atlas_name):
 		return atlas.get(atlas_name)
