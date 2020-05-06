@@ -10,6 +10,8 @@ from mmdps.proc import atlas, loader
 atlas_list = ['brodmann_lr', 'brodmann_lrce', 'aal', 'aicha', 'bnatlas']
 attr_list_full = ['BOLD.BC', 'BOLD.CCFS', 'BOLD.LE', 'BLD.WD', 'BOLD.net', 'DWI.FA', 'DWI.MD', 'DWI.net']
 attr_list = ['BOLD.BC', 'BOLD.CCFS', 'BOLD.LE', 'BOLD.WD', 'BOLD.net']
+dynamic_attr_list=['inter-region_bc','inter-region_ccfs','inter-region_le','inter-region_wd']
+dynamic_conf_list=[[1,22],[1,50],[1,100],[3,100]]
 
 def generate_static_database_attrs(): 
 	"""
@@ -46,6 +48,25 @@ def generate_static_database_networks():
 			except OSError as e:
 				# print(e)
 				print('! not found! scan: %s, atlas: %s, network not found!' % (mriscan, atlas_name))
+				
+
+def generate_dynamic_database_attrs(dynamic_rootfolder):
+	database=mongodb_database.MongoDBDatabase()
+	mriscans=os.listdir(dynamic_rootfolder)
+	atlas_name = 'brodmann_lrce'
+	atlasobj = atlas.get(atlas_name)
+	for dynamic_conf in dynamic_conf_list:
+		for attrname in dynamic_attr_list:
+			try:
+				attr = loader.load_dynamic_attrs(mriscans,atlasobj,attrname,dynamic_conf,dynamic_rootfolder)
+				database.save_dynamic_attr(attr)
+				#print('ok! scan: %s, atlas: %s, network ok!' % (mriscan, atlas_name))
+			except OSError as e:
+				# print(e)
+				#print('! not found! scan: %s, atlas: %s, network not found!' % (mriscan, atlas_name))
+
+
+
 
 def main():
 	mdb = mongodb_database.MongoDBDatabase(None)
