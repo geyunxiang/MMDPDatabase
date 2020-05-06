@@ -54,8 +54,8 @@ class MongoDBDatabase:
 			'atlas' : atlas_name,
 			'feature' :feature_name,
 			'dynamic' : 1,
-			'window length' : window_length,
-			'step size' :step_size}
+			'window_length' : window_length,
+			'step_size' :step_size}
 		return dynamic_query
 
 	def query_static(self, data_source, subject_scan, atlas_name, feature_name):

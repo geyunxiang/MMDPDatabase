@@ -55,7 +55,7 @@ def Inimongodb_dynamic():
                                 path = r'E:\Features' + '\\' + i + '\\' + 'brodmann_lrce' + '\\' + j + '\\' + 'dynamic ' + str(l) + ' ' + str(k) + '\\' + 'inter-region_bc-' + str(n * l) + '.' + str(k + n * l) + '.csv'
                             if os.path.exists(path):
                                 arr = np.loadtxt(path, delimiter=',')
-                                mydict = {'data_source': 'Changgung','scan':i,'atlas':'brodmann_lrce','feature':j,'dynamic':1,'window length':k,'step size':l,'no':n,'value':pickle.dumps(arr)}
+                                mydict = {'data_source': 'Changgung','scan':i,'atlas':'brodmann_lrce','feature':j,'dynamic':1,'window_length':k,'step_size':l,'no':n,'value':pickle.dumps(arr)}
                                 x = mycol.insert_one(mydict)
                             else:
                                 break
@@ -261,9 +261,24 @@ def error_test():
     except Exception as e:
         print(e)
         return(e)
-
+def cash_test():
+     a = RedisDatabase()
+     b=[1,2,3]
+     a.set_list_all_cache('b',b)
+     print(a.get_list_cache('b'))
+def hash_test():
+    a = RedisDatabase()
+    table={
+        'a':'a',
+        'b':'b',
+        'c':'c',
+        'd':'d'
+    }
+    a.set_hash_all('lalala', table)
+    a.delete_hash_key('lalala','a')
+    print(a.get_hash('lalala','a'))
 if __name__ == '__main__':
-    Inimongodb()
+    #Inimongodb()
     #float_test()
     #error_test()
     #a.get_static_value()
@@ -273,7 +288,9 @@ if __name__ == '__main__':
     #size_test()
     #save_test()
     #nptest()
-    Inimongodb_dynamic()
+    #Inimongodb_dynamic()
+    #cash_test()
     #dynamic_test()
     #pipe_safety_test()
     #print(a.exists_key('baihanxiang_20190307','aal','bold_interBC'))
+    hash_test()
