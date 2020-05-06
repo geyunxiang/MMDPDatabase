@@ -48,7 +48,7 @@ def generate_static_database_networks():
 			except OSError as e:
 				# print(e)
 				print('! not found! scan: %s, atlas: %s, network not found!' % (mriscan, atlas_name))
-				
+
 
 def generate_dynamic_database_attrs(dynamic_rootfolder):
 	database=mongodb_database.MongoDBDatabase()
@@ -58,12 +58,17 @@ def generate_dynamic_database_attrs(dynamic_rootfolder):
 	for dynamic_conf in dynamic_conf_list:
 		for attrname in dynamic_attr_list:
 			try:
-				attr = loader.load_dynamic_attrs(mriscans,atlasobj,attrname,dynamic_conf,dynamic_rootfolder)
-				database.save_dynamic_attr(attr)
-				#print('ok! scan: %s, atlas: %s, network ok!' % (mriscan, atlas_name))
+				attrs = loader.load_dynamic_attrs(mriscans,atlasobj,attrname,dynamic_conf,dynamic_rootfolder)
+				for attr in attrs:
+					database.save_dynamic_attr(attr)
+				print('ok! scans: %s, atlas: %s, attr: %s ok!' % (mriscans, atlas_name, attrname))
+				
 			except OSError as e:
 				# print(e)
-				#print('! not found! scan: %s, atlas: %s, network not found!' % (mriscan, atlas_name))
+				print('! not found! scans: %s, atlas: %s, attr: %s not found!' % (mriscans, atlas_name, attr_name))
+
+def generate_dynamic_database_net(dynamic_rootfolder):
+
 
 
 
