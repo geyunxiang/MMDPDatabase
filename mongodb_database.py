@@ -83,15 +83,15 @@ class MongoDBDatabase:
 		return self.col.count_documents(self.genarate_dynamic_query(data_source,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num))
 
 	def generate_static_document(self, data_source ,subject_scan, atlas_name, feature_name, value, comment=''):
-		static_document=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=0,value=value,comment='')
+		static_document=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=0,value=value,comment=comment)
 		return static_document
 
-	def generate_dynamic_document(self, data_source,subject_scan, atlas_name, feature_name, window_length, step_size, slice_num,value):
-		dynamic_document=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=1,window_length=window_length,step_size=step_size,slice_num=slice_num ,value=value,comment='')
+	def generate_dynamic_document(self, data_source,subject_scan, atlas_name, feature_name, window_length, step_size, slice_num,value,comment=''):
+		dynamic_document=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=1,window_length=window_length,step_size=step_size,slice_num=slice_num ,value=value,comment=comment)
 		return dynamic_document
 
 
-	def save_static_feature(self,feature,comment_dict):
+	def save_static_feature(self,feature,comment_dict={}):
 		"""
 		feature could be netattr.Net or netattr.Attr
 		comment_dict correspond to document['comment']
@@ -110,36 +110,61 @@ class MongoDBDatabase:
 		self.col.find_one_and_delete(query)
 
 	def save_dynamic_attr(self,attr,comment_dict={}):
-		"""
-		#the attribute of dynamic_attr
-		scan : CMSA_01;
-		atlasobj: brodmann_lrce
-		window_length : 100
-		step_size : 3
-		feature/attr: ["inter-region_bc", "inter-region_ccfs","inter-region_wd","inter-region_le"]
-		"""
 
+		"""
+		save a dynamic_attr object into mongo
+		"""
 		if self.exist_dynamic(self.data_source,attr.scan ,attr.atlasobj.name,attr.feature_name,attr.window_length,attr.step_size):
 			raise MultipleRecordException(attr.scan, 'Please check again.')
 		self.col=self.db['dynamic_data']
 		for i in range(attr.data.shape[1]):
 			# i is the num of the column in data matrix
-			data=attr.data[:,i]
-			value=pickle.dumps(data)
+			value=pickle.dumps(attr.data[:,i])
 			slice_num = i
-			document = self.generate_dynamic_document(self.data_source,attr.scan,attr.atlasobj.name,attr.feature_name,attr.window_length,attr.step_size,slice_num,value)
-			document['comment']=comment_dict
+			document = self.generate_dynamic_document(self.data_source,attr.scan,attr.atlasobj.name,attr.feature_name,attr.window_length,attr.step_size,slice_num,value,comment_dict)
 			self.col.insert_one(document)
 
-	def	remove_dynamic_attr(self,scan,atlas_name,feature_name,window_length,step_size):
-		# delete all the silce 
+	def	remove_dynamic_attr(self,scan,feature_name,window_length,step_size,atlas_name='brodmann_lrce'):
+		"""
+		fiter and delete all the slice
+		default atlas is brodmann_lrce
+		"""
 		self.col=self.db['dynamic_data']
 		query=self.genarate_dynamic_query(self.data_source,scan,atlas_name,feature_name,window_length,step_size)
 		self.col.delete_many(query)
-		
+	
+	def save_dynamic_network(self,net,comment_dict={}):
+		#the attribute of the net class object : scan, atlasobj,windoe_length,step_size;
+		"""
+		save a dynamic_net object into mongo
+		"""
+		if self.exist_dynamic(self.data_source,net.scan,net.atlasobj.name,net.feature_name,net.window_length,net.step_size):
+			raise MultipleRecordException(net.scan, 'Please check again.')
+		self.col=self.db['dynamic_data']
+		for i in range(net.data.shape[0]):
+			# i is the slice_num of the net
+			value=pickle.dumps(net.data[i,:,:])
+			slice_num=i
+			document=self.generate_dynamic_document(self.data_source,net.scan,net.atlasobj.name,net.feature_name,net.window_length,net.step_size,slice_num,value,comment_dict)
+			self.insert_one(document)
+
+	def remove_dynamic_network(self, scan,window_length,step_size,atlas_name='brodmann_lrce',feature_name='BOLD.net'):
+		"""
+		fiter and delete all the slice
+		default atlas is bromann_lrce 
+		default feature is BOLD.net
+		"""
+		self.col=self.db['dynamic_data']
+		query = self.genarate_dynamic_query(self.data_source,scan,atlas_name,feature_name,window_length,step_size)
+		self.col.delete_many(query)
+
+
+
+
+
 
 	def get_attr(self, subject_scan, atlas_name, feature_name):
-		#return to an attrobj directly
+		#return to an attr object  directly
 		if self.exist_static(self.data_source,subject_scan,atlas_name,feature_name):
 			binary_data = self.query_static(self.data_source,subject_scan, atlas_name, feature_name)['value']
 			attrdata = pickle.loads(binary_data)
@@ -152,6 +177,7 @@ class MongoDBDatabase:
 			return None
 
 	def get_net(self, subject_scan, atlas_name, feature_name ):
+		#return to an net object directly
 		if self.exist_static(self.data_source,subject_scan, atlas_name, feature_name ):
 			binary_data = self.query_static(self.data_source,subject_scan, atlas_name, feature_name )['value']
 			netdata = pickle.loads(binary_data)
