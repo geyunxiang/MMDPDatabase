@@ -11,7 +11,7 @@ atlas_list = ['brodmann_lr', 'brodmann_lrce', 'aal', 'aicha', 'bnatlas']
 attr_list_full = ['BOLD.BC', 'BOLD.CCFS', 'BOLD.LE', 'BLD.WD', 'BOLD.net', 'DWI.FA', 'DWI.MD', 'DWI.net']
 attr_list = ['BOLD.BC', 'BOLD.CCFS', 'BOLD.LE', 'BOLD.WD', 'BOLD.net']
 dynamic_attr_list=['inter-region_bc','inter-region_ccfs','inter-region_le','inter-region_wd']
-dynamic_conf_list=[[1,22],[1,50],[1,100],[3,100]]
+dynamic_conf_list=[[22,1],[50,1],[100,1],[100,3]]
 
 def generate_static_database_attrs(): 
 	"""
@@ -49,25 +49,43 @@ def generate_static_database_networks():
 				# print(e)
 				print('! not found! scan: %s, atlas: %s, network not found!' % (mriscan, atlas_name))
 
+				
+
 
 def generate_dynamic_database_attrs(dynamic_rootfolder):
 	database=mongodb_database.MongoDBDatabase()
 	mriscans=os.listdir(dynamic_rootfolder)
 	atlas_name = 'brodmann_lrce'
 	atlasobj = atlas.get(atlas_name)
-	for dynamic_conf in dynamic_conf_list:
-		for attrname in dynamic_attr_list:
-			try:
-				attrs = loader.load_dynamic_attrs(mriscans,atlasobj,attrname,dynamic_conf,dynamic_rootfolder)
-				for attr in attrs:
+	for mriscan in mriscans:
+		for dynamic_conf in dynamic_conf_list:
+			for attrname in dynamic_attr_list:
+				try:
+					attr = loader.load_single_dynamic_attr(mriscan,atlasobj,attrname,dynamic_conf,dynamic_rootfolder)
 					database.save_dynamic_attr(attr)
-				print('ok! scans: %s, atlas: %s, attr: %s ok!' % (mriscans, atlas_name, attrname))
-				
+					print('ok! scans: %s, attr: %s ok!' % (mriscan, attrname))
+
+				except OSError as e:
+					# print(e)
+					print('! not found! scans: %s, attr: %s not found!' % (mriscan, attr_name))
+
+
+def generate_dynamic_database_networks(dynamic_rootfolder):
+	database=mongodb_database.MongoDBDatabase()
+	mriscans=os.listdir(dynamic_rootfolder)
+	atlas_name = 'brodmann_lrce'
+	atlasobj = atlas.get(atlas_name)
+	for mriscan in mriscans:
+		for dynamic_conf in dynamic_conf_list:
+			try:
+				net = loader.load_single_dynamic_network(mriscan,atlasobj,dynamic_conf,dynamic_rootfolder)
+				database.save_dynamic_network(net)
+				print('ok! scan: %s ok!' % (mriscan))
 			except OSError as e:
 				# print(e)
-				print('! not found! scans: %s, atlas: %s, attr: %s not found!' % (mriscans, atlas_name, attr_name))
+				print('! not found! scan: %s  not found!' % (mriscan))
 
-def generate_dynamic_database_net(dynamic_rootfolder):
+
 
 
 
