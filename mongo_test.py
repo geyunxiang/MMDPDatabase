@@ -18,7 +18,7 @@ def generate_static_database_attrs():
 	Generate MongoDB from scratch. 
 	Scan a directory and move the directory to MongoDB
 	"""
-	database = mongodb_database.MongoDBDatabase()
+	database = mongodb_database.MongoDBDatabase('Changgung')
 	mriscans = os.listdir(rootconfig.path.feature_root)
 	for mriscan in mriscans:
 		for atlas_name in atlas_list:
@@ -35,7 +35,7 @@ def generate_static_database_attrs():
 					print('! not found! scan: %s, atlas: %s, attr: %s not found!' % (mriscan, atlas_name, attr_name))
 
 def generate_static_database_networks():
-	database = mongodb_database.MongoDBDatabase()
+	database = mongodb_database.MongoDBDatabase('Changgung')
 	mriscans = os.listdir(rootconfig.path.feature_root)
 	for mriscan in mriscans:
 		for atlas_name in atlas_list:
@@ -53,7 +53,7 @@ def generate_static_database_networks():
 
 
 def generate_dynamic_database_attrs(dynamic_rootfolder):
-	database=mongodb_database.MongoDBDatabase()
+	database=mongodb_database.MongoDBDatabase('Changgung')
 	mriscans=os.listdir(dynamic_rootfolder)
 	atlas_name = 'brodmann_lrce'
 	atlasobj = atlas.get(atlas_name)
@@ -71,7 +71,7 @@ def generate_dynamic_database_attrs(dynamic_rootfolder):
 
 
 def generate_dynamic_database_networks(dynamic_rootfolder):
-	database=mongodb_database.MongoDBDatabase()
+	database=mongodb_database.MongoDBDatabase('Changgung')
 	mriscans=os.listdir(dynamic_rootfolder)
 	atlas_name = 'brodmann_lrce'
 	atlasobj = atlas.get(atlas_name)
