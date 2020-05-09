@@ -40,9 +40,10 @@ from mmdps.proc import loader, atlas, netattr
 class MongoDBDatabase:
 	"""
 	docstring for MongoDBDatabase
+	non-default parameter : data_source
 	"""
 
-	def __init__(self, host = 'localhost', port = 27017, data_source ='Changgung', col = 'features', password = ''):
+	def __init__(self, data_source , host = 'localhost', port = 27017, col = 'features', password = ''):
 		self.data_source = data_source
 		self.client = pymongo.MongoClient(host, port)
 		self.db = self.client[data_source]
@@ -56,38 +57,40 @@ class MongoDBDatabase:
 	default collection : features;
 	"""
 
-	def generate_static_query(self, data_source,subject_scan, atlas_name, feature_name):
-		static_query=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=0)
+	def generate_static_query(self,subject_scan, atlas_name, feature_name):
+		static_query=dict(data_source=self.data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=0)
 		return static_query
 
-	def genarate_dynamic_query(self,data_source,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num = None):
-		dynamic_query=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=1,window_length=window_length,step_size=step_size,slice_num=slice_num)
+	def genarate_dynamic_query(self,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num= None):
+		dynamic_query=dict(data_source=self.data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=1,window_length=window_length,step_size=step_size)
+		if slice_num != None:
+			dynamic_query[slice_num] = slice_num
 		return dynamic_query
 
-	def query_static(self,data_source ,subject_scan, atlas_name, feature_name):
-		static_query= self.generate_static_query(data_source,subject_scan, atlas_name, feature_name)
+	def query_static(self,subject_scan, atlas_name, feature_name):
+		static_query= self.generate_static_query(subject_scan, atlas_name, feature_name)
 		self.col=self.db['features']
 		return self.col.find(static_query)
 
-	def query_dynamic(self,data_source,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num = None):
-		dynamic_query = self.genarate_dynamic_query(data_source,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num)
+	def query_dynamic(self,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num = None):
+		dynamic_query = self.genarate_dynamic_query(subject_scan, atlas_name, feature_name,window_length,step_size,slice_num)
 		self.col=self.db['dynamic_data']
 		return self.col.find(dynamic_query).sort("no",1)
 
-	def exist_static(self,data_source ,subject_scan, atlas_name, feature_name):
+	def exist_static(self,subject_scan, atlas_name, feature_name):
 		self.col=self.db['features']
-		return self.col.count_documents(self.generate_static_query(data_source,subject_scan, atlas_name, feature_name))
+		return self.col.count_documents(self.generate_static_query(subject_scan, atlas_name, feature_name))
 
-	def exist_dynamic(self,data_source,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num= None):
+	def exist_dynamic(self,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num= None):
 		self.col=self.db['dynamic_data']
-		return self.col.count_documents(self.genarate_dynamic_query(data_source,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num))
+		return self.col.count_documents(self.genarate_dynamic_query(subject_scan, atlas_name, feature_name,window_length,step_size,slice_num))
 
-	def generate_static_document(self, data_source ,subject_scan, atlas_name, feature_name, value, comment=''):
-		static_document=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=0,value=value,comment=comment)
+	def generate_static_document(self, subject_scan, atlas_name, feature_name, value, comment=''):
+		static_document=dict(data_source=self.data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=0,value=value,comment=comment)
 		return static_document
 
-	def generate_dynamic_document(self, data_source,subject_scan, atlas_name, feature_name, window_length, step_size, slice_num,value,comment=''):
-		dynamic_document=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=1,window_length=window_length,step_size=step_size,slice_num=slice_num ,value=value,comment=comment)
+	def generate_dynamic_document(self, subject_scan, atlas_name, feature_name, window_length, step_size, slice_num,value,comment=''):
+		dynamic_document=dict(data_source=self.data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=1,window_length=window_length,step_size=step_size,slice_num=slice_num ,value=value,comment=comment)
 		return dynamic_document
 
 
@@ -97,16 +100,16 @@ class MongoDBDatabase:
 		comment_dict correspond to document['comment']
 		"""
 		# check if feature already exist
-		if self.exist_static(self.data_source,feature.scan, feature.atlasobj.name, feature.feature_name):
+		if self.exist_static(feature.scan, feature.atlasobj.name, feature.feature_name):
 			raise MultipleRecordException(feature.scan, 'Please check again.')
 		attrdata = pickle.dumps(feature.data)
 		self.col = self.db['features']
-		document= self.generate_static_document(self.data_source,feature.scan, feature.atlasobj.name, feature.feature_name, attrdata,comment_dict)
+		document= self.generate_static_document(feature.scan, feature.atlasobj.name, feature.feature_name, attrdata,comment_dict)
 		self.col.insert_one(document)
 
 	def remove_static_feature(self, scan, atlas_name, feature_name):
 		self.col = self.db['features']
-		query=self.generate_static_query(self.data_source,scan, atlas_name, feature_name)
+		query=self.generate_static_query(scan, atlas_name, feature_name)
 		self.col.find_one_and_delete(query)
 
 	def save_dynamic_attr(self,attr,comment_dict={}):
@@ -114,14 +117,14 @@ class MongoDBDatabase:
 		"""
 		save a dynamic_attr object into mongo
 		"""
-		if self.exist_dynamic(self.data_source,attr.scan ,attr.atlasobj.name,attr.feature_name,attr.window_length,attr.step_size):
+		if self.exist_dynamic(attr.scan ,attr.atlasobj.name,attr.feature_name,attr.window_length,attr.step_size):
 			raise MultipleRecordException(attr.scan, 'Please check again.')
 		self.col=self.db['dynamic_data']
 		for i in range(attr.data.shape[1]):
 			# i is the num of the column in data matrix
 			value=pickle.dumps(attr.data[:,i])
 			slice_num = i
-			document = self.generate_dynamic_document(self.data_source,attr.scan,attr.atlasobj.name,attr.feature_name,attr.window_length,attr.step_size,slice_num,value,comment_dict)
+			document = self.generate_dynamic_document(attr.scan,attr.atlasobj.name,attr.feature_name,attr.window_length,attr.step_size,slice_num,value,comment_dict)
 			self.col.insert_one(document)
 
 	def	remove_dynamic_attr(self,scan,feature_name,window_length,step_size,atlas_name='brodmann_lrce'):
@@ -130,7 +133,7 @@ class MongoDBDatabase:
 		default atlas is brodmann_lrce
 		"""
 		self.col=self.db['dynamic_data']
-		query=self.genarate_dynamic_query(self.data_source,scan,atlas_name,feature_name,window_length,step_size)
+		query=self.genarate_dynamic_query(scan,atlas_name,feature_name,window_length,step_size)
 		self.col.delete_many(query)
 	
 	def save_dynamic_network(self,net,comment_dict={}):
@@ -138,15 +141,15 @@ class MongoDBDatabase:
 		"""
 		save a dynamic_net object into mongo
 		"""
-		if self.exist_dynamic(self.data_source,net.scan,net.atlasobj.name,net.feature_name,net.window_length,net.step_size):
+		if self.exist_dynamic(net.scan,net.atlasobj.name,net.feature_name,net.window_length,net.step_size):
 			raise MultipleRecordException(net.scan, 'Please check again.')
 		self.col=self.db['dynamic_data']
-		for i in range(net.data.shape[0]):
+		for i in range(net.data.shape[2]):
 			# i is the slice_num of the net
-			value=pickle.dumps(net.data[i,:,:])
+			value=pickle.dumps(net.data[:,:,i])
 			slice_num=i
-			document=self.generate_dynamic_document(self.data_source,net.scan,net.atlasobj.name,net.feature_name,net.window_length,net.step_size,slice_num,value,comment_dict)
-			self.insert_one(document)
+			document=self.generate_dynamic_document(net.scan,net.atlasobj.name,net.feature_name,net.window_length,net.step_size,slice_num,value,comment_dict)
+			self.col.insert_one(document)
 
 	def remove_dynamic_network(self, scan,window_length,step_size,atlas_name='brodmann_lrce',feature_name='BOLD.net'):
 		"""
@@ -155,7 +158,7 @@ class MongoDBDatabase:
 		default feature is BOLD.net
 		"""
 		self.col=self.db['dynamic_data']
-		query = self.genarate_dynamic_query(self.data_source,scan,atlas_name,feature_name,window_length,step_size)
+		query = self.genarate_dynamic_query(scan,atlas_name,feature_name,window_length,step_size)
 		self.col.delete_many(query)
 
 
