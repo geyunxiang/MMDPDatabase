@@ -38,14 +38,14 @@ from mmdps.proc import loader, atlas, netattr
 class MongoDBDatabase:
 	"""
 	docstring for MongoDBDatabase
-	parameter data_source: 		the only non-default parameter of constructor
-	parameter scan :			mriscan 
-	parameter atlas : 			name of atlas
-	parameter feature : 		name of feature file
-	parameter dynamic : 		0/1
-	parameter window_length : 	window_length
-	parameter step_size : 		step_size
-	parameter slice_num : 		the number of slice in a sequence
+	parameter data_source: 	the only non-default parameter of constructor function
+	parameter scan :		mriscan 
+	parameter atlas : 		name of atlas
+	parameter feature : 	name of feature file
+	parameter dynamic : 	0/1
+	parameter window_length : window_length
+	parameter step_size : 	step_size
+	parameter slice_num : 	the number of slice in a sequence
 	"""
 
 	def __init__(self, data_source , host = 'localhost', port = 27017, col = 'features', password = ''):
@@ -65,10 +65,8 @@ class MongoDBDatabase:
 		static_query=dict(data_source=self.data_source,scan=scan,atlas=atlas,feature=feature,dynamic=0)
 		return static_query
 
-	def genarate_dynamic_query(self,scan, atlas, feature,window_length,step_size,slice_num= None):
+	def genarate_dynamic_query(self,scan, atlas, feature,window_length,step_size):
 		dynamic_query=dict(data_source=self.data_source,scan=scan,atlas=atlas,feature=feature,dynamic=1,window_length=window_length,step_size=step_size)
-		if slice_num != None:
-			dynamic_query[slice_num] = slice_num
 		return dynamic_query
 
 	def query_static(self,scan, atlas, feature):
@@ -76,8 +74,8 @@ class MongoDBDatabase:
 		self.col=self.db['features']
 		return self.col.find(static_query)
 
-	def query_dynamic(self,scan,atlas,feature,window_length,step_size,slice_num = None):
-		dynamic_query = self.genarate_dynamic_query(scan, atlas, feature,window_length,step_size,slice_num)
+	def query_dynamic(self,scan,atlas,feature,window_length,step_size):
+		dynamic_query = self.genarate_dynamic_query(scan, atlas, feature,window_length,step_size)
 		self.col=self.db['dynamic_data']
 		return self.col.find(dynamic_query).sort("no",1)
 
@@ -85,9 +83,9 @@ class MongoDBDatabase:
 		self.col=self.db['features']
 		return self.col.count_documents(self.generate_static_query(scan, atlas, feature))
 
-	def exist_dynamic(self,scan, atlas, feature,window_length,step_size,slice_num = None):
+	def exist_dynamic(self,scan, atlas, feature,window_length,step_size):
 		self.col=self.db['dynamic_data']
-		return self.col.count_documents(self.genarate_dynamic_query(scan, atlas, feature,window_length,step_size,slice_num))
+		return self.col.count_documents(self.genarate_dynamic_query(scan, atlas, feature,window_length,step_size))
 
 	def generate_static_document(self,scan, atlas, feature, value, comment=''):
 		static_document=dict(data_source=self.data_source,scan=scan,atlas=atlas,feature=feature,dynamic=0,value=value,comment=comment)
@@ -133,7 +131,7 @@ class MongoDBDatabase:
 
 	def	remove_dynamic_attr(self,scan,feature,window_length,step_size,atlas='brodmann_lrce'):
 		"""
-		fiter and delete all the slice
+		fiter and delete all the slice in dynamic_attr
 		default atlas is brodmann_lrce
 		"""
 		self.col=self.db['dynamic_data']
@@ -156,7 +154,7 @@ class MongoDBDatabase:
 
 	def remove_dynamic_network(self,scan,window_length,step_size,atlas='brodmann_lrce',feature='BOLD.net'):
 		"""
-		fiter and delete all the slice
+		fiter and delete all the slice in dynamic_network
 		default atlas is bromann_lrce 
 		default feature is BOLD.net
 		"""
