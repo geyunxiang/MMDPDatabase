@@ -60,8 +60,8 @@ class MongoDBDatabase:
 		static_query=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=0)
 		return static_query
 
-	def genarate_dynamic_query(self,data_source,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num = None):
-		dynamic_query=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=1,window_length=window_length,step_size=step_size,slice_num=slice_num)
+	def genarate_dynamic_query(self,data_source,subject_scan, atlas_name, feature_name,window_length,step_size):
+		dynamic_query=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=1,window_length=window_length,step_size=step_size)
 		return dynamic_query
 
 	def query_static(self,data_source ,subject_scan, atlas_name, feature_name):
@@ -70,7 +70,7 @@ class MongoDBDatabase:
 		return self.col.find(static_query)
 
 	def query_dynamic(self,data_source,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num = None):
-		dynamic_query = self.genarate_dynamic_query(data_source,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num)
+		dynamic_query = self.genarate_dynamic_query(data_source,subject_scan, atlas_name, feature_name,window_length,step_size)
 		self.col=self.db['dynamic_data']
 		return self.col.find(dynamic_query).sort("no",1)
 
@@ -89,7 +89,6 @@ class MongoDBDatabase:
 	def generate_dynamic_document(self, data_source,subject_scan, atlas_name, feature_name, window_length, step_size, slice_num,value,comment=''):
 		dynamic_document=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=1,window_length=window_length,step_size=step_size,slice_num=slice_num ,value=value,comment=comment)
 		return dynamic_document
-
 
 	def save_static_feature(self,feature,comment_dict={}):
 		"""
@@ -110,7 +109,6 @@ class MongoDBDatabase:
 		self.col.find_one_and_delete(query)
 
 	def save_dynamic_attr(self,attr,comment_dict={}):
-
 		"""
 		save a dynamic_attr object into mongo
 		"""
@@ -132,7 +130,7 @@ class MongoDBDatabase:
 		self.col=self.db['dynamic_data']
 		query=self.genarate_dynamic_query(self.data_source,scan,atlas_name,feature_name,window_length,step_size)
 		self.col.delete_many(query)
-	
+
 	def save_dynamic_network(self,net,comment_dict={}):
 		#the attribute of the net class object : scan, atlasobj,windoe_length,step_size;
 		"""
@@ -157,11 +155,6 @@ class MongoDBDatabase:
 		self.col=self.db['dynamic_data']
 		query = self.genarate_dynamic_query(self.data_source,scan,atlas_name,feature_name,window_length,step_size)
 		self.col.delete_many(query)
-
-
-
-
-
 
 	def get_attr(self, subject_scan, atlas_name, feature_name):
 		#return to an attr object  directly

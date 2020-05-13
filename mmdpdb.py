@@ -22,7 +22,8 @@ from mmdps.dms import tables
 from mmdps.util import loadsave, clock
 from mmdps import rootconfig
 
-from . import mongodb_database, redis_database
+# from . import mongodb_database, redis_database
+import mongodb_database, redis_database
 
 class MMDPDatabase:
 	def __init__(self, data_source = 'Changgung'):
@@ -77,10 +78,10 @@ class MMDPDatabase:
 					raise mongodb_database.NoRecordFoundException('No such item in redis or mongodb: ' + scan + ' ' + atlasobj + ' ' + feature_name + ' ' + str(window_length) + ' ' + str(step_size))
 					# raise Exception('No such item in both redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name +' '+
 					# 			 ' '+ str(window_length) +' '+ str(step_size))
-			if return_single:
-				return ret_list[0]
-			else:
-				return ret_list
+		if return_single:
+			return ret_list[0]
+		else:
+			return ret_list
 
 	def get_temp_feature(self, feature_collection, feature_name):
 		pass

@@ -67,7 +67,7 @@ class RedisDatabase:
 					pass
 		except Exception as e:
 			raise Exception('Unble to stop redis，error message:' + str(e))
-	
+
 	#set value
 	def set_value(self, obj, data_source):
 		if type(obj) is dict:
@@ -115,12 +115,12 @@ class RedisDatabase:
 		key = self.generate_static_key(data_source, subject_scan, atlas_name, feature_name)
 		res = self.datadb.get(key)
 		self.datadb.expire(key, 1800)
-		if res != None:
+		if res is not None:
 			return self.trans_netattr(subject_scan, atlas_name, feature_name, pickle.loads(res))
 		else:
 			return None
 
-	def trans_netattr(self,subject_scan , atlas_name, feature_name, value):
+	def trans_netattr(self,subject_scan, atlas_name, feature_name, value):
 		if feature_name not in ['dwi_net', 'bold_net']:  # 这里要改一下
 			arr = netattr.Attr(value, atlas.get(atlas_name),subject_scan, feature_name)
 			return arr
@@ -153,7 +153,7 @@ class RedisDatabase:
 			return self.trans_dynamic_netattr(subject_scan, atlas_name, feature_name, window_length, step_size, np.array(value))
 		else:
 			return None
-	
+
 	def trans_dynamic_netattr(self, subject_scan, atlas_name, feature_name, window_length, step_size, value):
 		if feature_name not in ['dwi_net', 'bold_net']:  # 这里要改一下
 			arr = netattr.DynamicAttr(value, atlas.get(atlas_name), window_length, step_size, subject_scan, feature_name)
@@ -164,7 +164,7 @@ class RedisDatabase:
 
 	#is exist
 	def exists_key(self,data_source, subject_scan, atlas_name, feature_name, isdynamic = False, window_length = 0, step_size = 0):
-		if isdynamic ==False:
+		if isdynamic is False:
 			return self.datadb.exists(self.generate_static_key(data_source, subject_scan, atlas_name, feature_name))
 		else:
 			return self.datadb.exists(self.generate_dynamic_key(data_source, subject_scan, atlas_name, feature_name, window_length, step_size) + ':0')
@@ -176,14 +176,15 @@ class RedisDatabase:
 		#self.cachedb.save()
 		return self.cachedb.llen(key)
 
-	def set_list_cache(self,key,value):	#这里的key用list的名字之类的就可以，因为不是文件结构，所以键名不需要结构化
+	def set_list_cache(self,key,value):	
+		#这里的key用list的名字之类的就可以，因为不是文件结构，所以键名不需要结构化
 		self.cachedb.rpush(key,value)
 		#self.cachedb.save()
 		return self.cachedb.llen(key)
 
 	def get_list_cache(self, key, start = 0, end = -1):
 		lst = self.cachedb.lrange(key, start, end)
-		lst  = [ float(x) for x in lst ]
+		lst = [float(x) for x in lst]
 		return lst
 
 	def exists_key_cache(self, key):
@@ -206,6 +207,7 @@ class RedisDatabase:
 			self.hashdb.hmset(item1)
 		else:
 			self.hashdb.hset(name, item1, item2)
+
 	def get_hash(self,name,keys=[]):
 		if not keys:
 			return self.hashdb.hgetall(name)
@@ -232,6 +234,7 @@ class RedisDatabase:
 
 	def flushall(self):
 		self.datadb.flushall()
+
 if __name__ == '__main__':
 	pass
 	#get value
