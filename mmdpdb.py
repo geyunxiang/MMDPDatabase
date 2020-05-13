@@ -44,7 +44,7 @@ class MMDBDatabase:
 			if res != None:
 				ret_list.append(res)
 			else:
-				doc = self.mdb.query_static(data_source, scan, atlasobj, feature_name)
+				doc = self.mdb.query_static(scan, atlasobj, feature_name)
 				if doc.count() != 0:
 					ret_list.append(self.rdb.set_value(doc[0],data_source))
 				else:
@@ -67,7 +67,7 @@ class MMDBDatabase:
 			if res != None:
 				ret_list.append(res)
 			else:
-				doc = self.mdb.query_dynamic(data_source, scan, atlasobj, feature_name, window_length, step_size)
+				doc = self.mdb.query_dynamic(scan, atlasobj, feature_name, window_length, step_size)
 				if doc.count() != 0:
 					mat = self.rdb.set_value(doc,data_source)
 					ret_list.append(mat)
