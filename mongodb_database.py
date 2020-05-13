@@ -1,7 +1,7 @@
-"""
+'''
 MongoDB is a non-relational database used to store feature values.
-It stores data in JSON format, with a hierarchy of 
-db server -> database -> collection -> record. 
+It stores data in JSON format, with a hierarchy of
+db server -> database -> collection -> record.
 
 The record looks like this:
 static
@@ -21,16 +21,16 @@ dynamic
 	#struture:datasource->scan->atlas->feature->dynamic->window_length->step_size->slice_num->value->comment
 	"data_source":"Changgung",
 	"scan": "CMSA_01",
-	"atlas": "brodmann_lrce", 
+	"atlas": "brodmann_lrce",
 	"feature": "BOLD.inter.BC",
 	"dynamic": 1, 
 	"window_length": 22,
-	"step_size": 1, 
+	"step_size": 1,
 	"slice_num": the num of the slice 0,1,2,3…
 	"value": "...actual csv str...",
 	"comment": {"...descriptive str..."}
 }
-"""
+'''
 
 import pymongo
 import numpy as np 
@@ -80,7 +80,7 @@ class MongoDBDatabase:
 
 	def exist_dynamic(self,data_source,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num= None):
 		self.col=self.db['dynamic_data']
-		return self.col.count_documents(self.genarate_dynamic_query(data_source,subject_scan, atlas_name, feature_name,window_length,step_size,slice_num))
+		return self.col.count_documents(self.genarate_dynamic_query(data_source,subject_scan, atlas_name, feature_name,window_length,step_size))
 
 	def generate_static_document(self, data_source ,subject_scan, atlas_name, feature_name, value, comment=''):
 		static_document=dict(data_source=data_source,scan=subject_scan,atlas=atlas_name,feature=feature_name,dynamic=0,value=value,comment=comment)

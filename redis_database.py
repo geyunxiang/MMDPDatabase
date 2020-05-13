@@ -51,7 +51,7 @@ class RedisDatabase:
 		try:
 			self.datadb = StrictRedis(host='localhost', port=6379, db=0)
 			self.cachedb = StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
-			self.hashdb = StrictRedis(host='localhost', port=6379, db=2, decode_responses=True)
+			self.hashdb = StrictRedis(host='localhost', port=6379, db=2)
 		except Exception as e:
 			raise Exception('Redis connection failed，error message:' + str(e))
 
@@ -84,13 +84,13 @@ class RedisDatabase:
 			step_size = obj[0]['step_size']
 			key_all = self.generate_dynamic_key(data_source, scan, atlas, feature, window_length, step_size)
 			pipe = self.datadb.pipeline()
+			len=obj.count()
 			try:
 				pipe.multi()
-				for j in obj:  # 使用查询关键字保证升序
-					len = len + 1
-					pipe.set(key_all + ':' + str(len), (j['value']), ex=1800)
-					value.append(pickle.loads(j['value']))
 				pipe.set(key_all + ':0', len, ex=1600)
+				for i in range(len):  # 使用查询关键字保证升序
+					pipe.set(key_all + ':' + str(i+1), (obj[i]['value']), ex=1800)
+					value.append(pickle.dumps(obj[i]['value']))
 				pipe.execute()
 			except Exception as e:
 				raise Exception('An error occur when tring to set value in redis, error message: ' + str(e))
@@ -99,8 +99,26 @@ class RedisDatabase:
 			key = self.generate_static_key(data_source, obj.scan, obj.atlasobj.name, obj.feature_name)
 			self.atadb.set(key, pickle.dumps(obj.data))
 		elif type(obj) is netattr.DynamicNet or type(obj) is netattr.DynamicAttr:
-			key = self.generate_dynamic_key(data_source, obj.scan, obj.atlasobj.name, obj.feature_name, obj.windowLength, obj.stepSize)
-			self.datadb.set(key, pickle.dumps(obj.data))
+			key_all = self.generate_dynamic_key(data_source, obj.scan, obj.atlasobj.name, obj.feature_name, obj.window_length, obj.step_size)
+			len=obj.data.shape[2]
+			pipe = self.datadb.pipeline()
+			if type(obj) is netattr.DynamicNet:
+				flag = True
+			else:
+				flag = False
+			try:
+				pipe.multi()
+				pipe.set(key_all + ':0', len, ex=1600)
+				for i in range(len):  # 使用查询关键字保证升序
+					if flag:
+						pipe.set(key_all + ':' + str(i + 1), pickle.dumps(obj.data[:, :, i]), ex=1800)
+					else:
+						pipe.set(key_all + ':' + str(i + 1), obj.data[:, i], ex=1800)
+				pipe.execute()
+			except Exception as e:
+				raise Exception('An error occur when tring to set value in redis, error message: ' + str(e))
+
+
 
 	def generate_static_key(self, data_source, subject_scan, atlas_name, feature_name):
 		key = data_source + ':' + subject_scan + ':' + atlas_name + ':' + feature_name + ':0'
@@ -156,10 +174,10 @@ class RedisDatabase:
 
 	def trans_dynamic_netattr(self, subject_scan, atlas_name, feature_name, window_length, step_size, value):
 		if feature_name not in ['dwi_net', 'bold_net']:  # 这里要改一下
-			arr = netattr.DynamicAttr(value, atlas.get(atlas_name), window_length, step_size, subject_scan, feature_name)
+			arr = netattr.DynamicAttr(value.swapaxes(0,1), atlas.get(atlas_name), window_length, step_size, subject_scan, feature_name)
 			return arr
 		else:
-			net = netattr.DynamicNet(value, atlas.get(atlas_name), window_length, step_size, subject_scan, feature_name)
+			net = netattr.DynamicNet(value.swapaxes(0,2).swapaxes(0,1), atlas.get(atlas_name), window_length, step_size, subject_scan, feature_name)
 			return net
 
 	#is exist
@@ -176,15 +194,19 @@ class RedisDatabase:
 		#self.cachedb.save()
 		return self.cachedb.llen(key)
 
-	def set_list_cache(self,key,value):	
-		#这里的key用list的名字之类的就可以，因为不是文件结构，所以键名不需要结构化
+	def set_list_cache(self,key,value):
 		self.cachedb.rpush(key,value)
 		#self.cachedb.save()
 		return self.cachedb.llen(key)
 
 	def get_list_cache(self, key, start = 0, end = -1):
-		lst = self.cachedb.lrange(key, start, end)
-		lst = [float(x) for x in lst]
+		res = self.cachedb.lrange(key, start, end)
+		lst=[]
+		for x in res:
+			if x.isdigit():
+				lst.append(int(x))
+			else:
+				lst.append(float(x))
 		return lst
 
 	def exists_key_cache(self, key):
@@ -200,22 +222,32 @@ class RedisDatabase:
 
 	def set_hash_all(self,name,hash):
 		self.hashdb.delete(name)
+		for i in hash:
+			hash[i]=pickle.dumps(hash[i])
 		self.hashdb.hmset(name,hash)
 
 	def set_hash(self,name, item1, item2=''):
 		if type(item1) is dict:
-			self.hashdb.hmset(item1)
+			for i in item1:
+				item1[i] = pickle.dumps(item1[i])
+			self.hashdb.hmset(name,item1)
 		else:
-			self.hashdb.hset(name, item1, item2)
-
+			self.hashdb.hset(name, item1, pickle.dumps(item2))
 	def get_hash(self,name,keys=[]):
 		if not keys:
-			return self.hashdb.hgetall(name)
+			res = self.hashdb.hgetall(name)
+			hash={}
+			for i in res:
+				hash[i.decode()]=pickle.loads(res[i])
+			return hash
 		else:
 			if type(keys) is list:
-				return self.hashdb.hmget(name, keys)
+				res = self.hashdb.hmget(name, keys)
+				for i in range(len(res)):
+					res[i]=pickle.loads(res[i])
+				return res
 			else:
-				return self.hashdb.hget(name, keys)
+				return pickle.loads(self.hashdb.hget(name, keys))
 
 	def exists_hash(self,name):
 		return self.hashdb.exists(name)
