@@ -74,10 +74,10 @@ class MMDBDatabase:
 				else:
 					raise Exception('No such item in both redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name +' '+
 								 ' '+ str(window_length) +' '+ str(step_size))
-			if return_single:
-				return ret_list[0]
-			else:
-				return ret_list
+		if return_single:
+			return ret_list[0]
+		else:
+			return ret_list
 
 	def get_temp_feature(self, feature_collection, feature_name):
 		pass

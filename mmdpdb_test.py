@@ -27,6 +27,5 @@ def test_get_dynamic_feature():
 	a.get_dynamic_feature(DTNAMIC_SCAN,'brodmann_lrce','bold_net',22,1)
 
 if __name__ == '__main__':
-	test_cache()
 	a = mmdpdb.MMDBDatabase()
 	a.get_dynamic_feature('CMSA_01','brodmann_lrce','bold_net',22,1)

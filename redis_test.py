@@ -6,7 +6,7 @@ import pymongo
 import pickle
 import time
 from redis_database import RedisDatabase
-from mongodb_database import MongoDBDatabase
+#from mongodb_database import MongoDBDatabase
 from mmdps.proc import netattr, atlas, loader
 from mmdps import rootconfig
 
@@ -203,7 +203,7 @@ def save_test():
 
 def float_test():
     r = redis.StrictRedis(host='localhost', port=6379, db=15)
-    r.set('name',4.3E-3)
+    r.set('name',0.11111111111111111111)
     print(r.get('name'))
 
 def nptest():
@@ -277,6 +277,26 @@ def hash_test():
     a.set_hash_all('lalala', table)
     a.delete_hash_key('lalala','a')
     print(a.get_hash('lalala','a'))
+def nparray_test():
+    lst1=[]
+    '''for i in range(1000):
+        lst2=[]
+        for j in range(1000):
+            lst3=[]
+            for k in range(1000):
+                lst3.append(i+j+k)
+            lst2.append(lst3)
+        lst1.append(lst2)'''
+    start = time.perf_counter()
+    for i in range(10000):
+        value=np.zeros((100,100,100))
+    end = time.perf_counter()
+    print('running time: %s Seconds' % (end - start))
+    for i in range(10000):
+        value=value.swapaxes(0,2).swapaxes(0,1)
+    end = time.perf_counter()
+    print('running time: %s Seconds' % (end - start))
+
 if __name__ == '__main__':
     #Inimongodb()
     #float_test()
@@ -293,4 +313,18 @@ if __name__ == '__main__':
     #dynamic_test()
     #pipe_safety_test()
     #print(a.exists_key('baihanxiang_20190307','aal','bold_interBC'))
-    hash_test()
+    #hash_test()
+    #nparray_test()
+    a=RedisDatabase()
+    b={
+        'a':1.01234,
+        'b':{'c':1.345}
+    }
+    c={
+        'a':1.01234,
+        'b':{'c':1.345}
+    }
+    a.set_hash_all('lalala',b)
+    a.set_hash('lalala',c)
+    print(a.get_hash('lalala'))
+
