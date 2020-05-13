@@ -67,7 +67,7 @@ def generate_dynamic_database_attrs(dynamic_rootfolder):
 
 				except OSError as e:
 					# print(e)
-					print('! not found! scans: %s, attr: %s not found!' % (mriscan, attr_name))
+					print('! not found! scans: %s, attr: %s not found!' % (mriscan, attrname))
 
 
 def generate_dynamic_database_networks(dynamic_rootfolder):
