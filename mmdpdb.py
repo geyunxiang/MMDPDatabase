@@ -22,13 +22,14 @@ from mmdps.dms import tables
 from mmdps.util import loadsave, clock
 from mmdps import rootconfig
 
-import mongodb_database, redis_database
+from . import mongodb_database, redis_database
 
-class MMDBDatabase:
-	def __init__(self):
+class MMDPDatabase:
+	def __init__(self, data_source = 'Changgung'):
 		self.rdb = redis_database.RedisDatabase()
-		self.mdb = mongodb_database.MongoDBDatabase()
+		self.mdb = mongodb_database.MongoDBDatabase(data_source = data_source)
 		self.sdb = SQLiteDB()
+		self.data_source = data_source
 
 	def get_feature(self, scan_list, atlasobj, feature_name, data_source = 'Changgung'):
 		#wrong input check
@@ -41,14 +42,15 @@ class MMDBDatabase:
 		ret_list = []
 		for scan in scan_list:
 			res = self.rdb.get_static_value(data_source, scan, atlasobj, feature_name)
-			if res != None:
+			if res is not None:
 				ret_list.append(res)
 			else:
 				doc = self.mdb.query_static(data_source, scan, atlasobj, feature_name)
 				if doc.count() != 0:
 					ret_list.append(self.rdb.set_value(doc[0],data_source))
 				else:
-					raise Exception('No such item in redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name)
+					raise mongodb_database.NoRecordFoundException('No such item in redis and mongodb: ' + scan + ' ' + atlasobj + ' ' + feature_name)
+					# raise Exception('No such item in redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name)
 		if return_single:
 			return ret_list[0]
 		else:
@@ -64,7 +66,7 @@ class MMDBDatabase:
 		ret_list = []
 		for scan in scan_list:
 			res = self.rdb.get_dynamic_value(data_source, scan, atlasobj, feature_name, window_length, step_size)
-			if res != None:
+			if res is not None:
 				ret_list.append(res)
 			else:
 				doc = self.mdb.query_dynamic(data_source, scan, atlasobj, feature_name, window_length, step_size)
@@ -72,8 +74,9 @@ class MMDBDatabase:
 					mat = self.rdb.set_value(doc,data_source)
 					ret_list.append(mat)
 				else:
-					raise Exception('No such item in both redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name +' '+
-								 ' '+ str(window_length) +' '+ str(step_size))
+					raise mongodb_database.NoRecordFoundException('No such item in redis or mongodb: ' + scan + ' ' + atlasobj + ' ' + feature_name + ' ' + str(window_length) + ' ' + str(step_size))
+					# raise Exception('No such item in both redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name +' '+
+					# 			 ' '+ str(window_length) +' '+ str(step_size))
 			if return_single:
 				return ret_list[0]
 			else:
