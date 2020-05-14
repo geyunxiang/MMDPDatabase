@@ -31,9 +31,8 @@ dynamic
 '''
 
 import pymongo
-import numpy as np 
 import pickle
-from mmdps.proc import loader, atlas, netattr
+from mmdps.proc import atlas, netattr
 
 class MongoDBDatabase:
 	"""
@@ -48,7 +47,7 @@ class MongoDBDatabase:
 	parameter slice_num : 	the number of slice in a sequence
 	"""
 
-	def __init__(self, data_source , host = 'localhost', port = 27017, col = 'features', password = ''):
+	def __init__(self, data_source, host = 'localhost', port = 27017, col = 'features', password = ''):
 		self.data_source = data_source
 		self.client = pymongo.MongoClient(host, port)
 		self.db = self.client[data_source]
@@ -61,38 +60,38 @@ class MongoDBDatabase:
 	default collection : features;
 	"""
 
-	def generate_static_query(self,scan, atlas, feature):
-		static_query=dict(data_source=self.data_source,scan=scan,atlas=atlas,feature=feature,dynamic=0)
+	def generate_static_query(self,scan, atlas_name, feature):
+		static_query=dict(data_source=self.data_source,scan=scan,atlas=atlas_name,feature=feature,dynamic=0)
 		return static_query
 
-	def genarate_dynamic_query(self,scan, atlas, feature,window_length,step_size):
-		dynamic_query=dict(data_source=self.data_source,scan=scan,atlas=atlas,feature=feature,dynamic=1,window_length=window_length,step_size=step_size)
+	def genarate_dynamic_query(self,scan, atlas_name, feature,window_length,step_size):
+		dynamic_query=dict(data_source=self.data_source,scan=scan,atlas=atlas_name,feature=feature,dynamic=1,window_length=window_length,step_size=step_size)
 		return dynamic_query
 
-	def query_static(self,scan, atlas, feature):
-		static_query= self.generate_static_query(scan, atlas, feature)
+	def query_static(self,scan, atlas_name, feature):
+		static_query= self.generate_static_query(scan, atlas_name, feature)
 		self.col=self.db['features']
 		return self.col.find(static_query)
 
-	def query_dynamic(self,scan,atlas,feature,window_length,step_size):
-		dynamic_query = self.genarate_dynamic_query(scan, atlas, feature,window_length,step_size)
+	def query_dynamic(self,scan,atlas_name,feature,window_length,step_size):
+		dynamic_query = self.genarate_dynamic_query(scan, atlas_name, feature,window_length,step_size)
 		self.col=self.db['dynamic_data']
 		return self.col.find(dynamic_query).sort("no",1)
 
-	def exist_static(self,scan, atlas, feature):
+	def exist_static(self,scan, atlas_name, feature):
 		self.col=self.db['features']
-		return self.col.count_documents(self.generate_static_query(scan, atlas, feature))
+		return self.col.count_documents(self.generate_static_query(scan, atlas_name, feature))
 
-	def exist_dynamic(self,scan, atlas, feature,window_length,step_size):
+	def exist_dynamic(self,scan, atlas_name, feature,window_length,step_size):
 		self.col=self.db['dynamic_data']
-		return self.col.count_documents(self.genarate_dynamic_query(scan, atlas, feature,window_length,step_size))
+		return self.col.count_documents(self.genarate_dynamic_query(scan, atlas_name, feature,window_length,step_size))
 
-	def generate_static_document(self,scan, atlas, feature, value, comment=''):
-		static_document=dict(data_source=self.data_source,scan=scan,atlas=atlas,feature=feature,dynamic=0,value=value,comment=comment)
+	def generate_static_document(self,scan, atlas_name, feature, value, comment=''):
+		static_document=dict(data_source=self.data_source,scan=scan,atlas=atlas_name,feature=feature,dynamic=0,value=value,comment=comment)
 		return static_document
 
-	def generate_dynamic_document(self,scan, atlas, feature, window_length, step_size, slice_num,value,comment=''):
-		dynamic_document=dict(data_source=self.data_source,scan=scan,atlas=atlas,feature=feature,dynamic=1,window_length=window_length,step_size=step_size,slice_num=slice_num ,value=value,comment=comment)
+	def generate_dynamic_document(self,scan, atlas_name, feature, window_length, step_size, slice_num,value,comment=''):
+		dynamic_document=dict(data_source=self.data_source,scan=scan,atlas=atlas_name,feature=feature,dynamic=1,window_length=window_length,step_size=step_size,slice_num=slice_num,value=value,comment=comment)
 		return dynamic_document
 
 	def save_static_feature(self,feature,comment_dict={}):
@@ -108,16 +107,16 @@ class MongoDBDatabase:
 		document= self.generate_static_document(feature.scan, feature.atlasobj.name, feature.feature, attrdata,comment_dict)
 		self.col.insert_one(document)
 
-	def remove_static_feature(self, scan, atlas, feature):
+	def remove_static_feature(self, scan, atlas_name, feature):
 		self.col = self.db['features']
-		query=self.generate_static_query(scan, atlas, feature)
+		query=self.generate_static_query(scan, atlas_name, feature)
 		self.col.find_one_and_delete(query)
 
 	def save_dynamic_attr(self,attr,comment_dict={}):
 		"""
 		attr is netattr.DynamicAttr
 		"""
-		if self.exist_dynamic(attr.scan ,attr.atlasobj.name,attr.feature,attr.window_length,attr.step_size):
+		if self.exist_dynamic(attr.scan,attr.atlasobj.name,attr.feature,attr.window_length,attr.step_size):
 			raise MultipleRecordException(attr.scan, 'Please check again.')
 		self.col=self.db['dynamic_data']
 		for i in range(attr.data.shape[1]):
@@ -127,13 +126,13 @@ class MongoDBDatabase:
 			document = self.generate_dynamic_document(attr.scan,attr.atlasobj.name,attr.feature,attr.window_length,attr.step_size,slice_num,value,comment_dict)
 			self.col.insert_one(document)
 
-	def	remove_dynamic_attr(self,scan,feature,window_length,step_size,atlas='brodmann_lrce'):
+	def remove_dynamic_attr(self,scan,feature,window_length,step_size,atlas_name='brodmann_lrce'):
 		"""
 		fiter and delete all the slice in dynamic_attr
 		default atlas is brodmann_lrce
 		"""
 		self.col=self.db['dynamic_data']
-		query=self.genarate_dynamic_query(scan,atlas,feature,window_length,step_size)
+		query=self.genarate_dynamic_query(scan,atlas_name,feature,window_length,step_size)
 		self.col.delete_many(query)
 
 	def save_dynamic_network(self,net,comment_dict={}):
@@ -150,39 +149,39 @@ class MongoDBDatabase:
 			document=self.generate_dynamic_document(net.scan,net.atlasobj.name,net.feature,net.window_length,net.step_size,slice_num,value,comment_dict)
 			self.col.insert_one(document)
 
-	def remove_dynamic_network(self,scan,window_length,step_size,atlas='brodmann_lrce',feature='BOLD.net'):
+	def remove_dynamic_network(self,scan,window_length,step_size,atlas_name='brodmann_lrce',feature='BOLD.net'):
 		"""
 		fiter and delete all the slice in dynamic_network
 		default atlas is bromann_lrce 
 		default feature is BOLD.net
 		"""
 		self.col=self.db['dynamic_data']
-		query = self.genarate_dynamic_query(scan,atlas,feature,window_length,step_size)
+		query = self.genarate_dynamic_query(scan,atlas_name,feature,window_length,step_size)
 		self.col.delete_many(query)
 
-	def get_attr(self,scan, atlas, feature):
+	def get_attr(self,scan, atlas_name, feature):
 		#return to an attr object  directly
-		if self.exist_static(scan,atlas,feature):
-			binary_data = self.query_static(scan, atlas, feature)['value']
+		if self.exist_static(scan,atlas_name,feature):
+			binary_data = self.query_static(scan, atlas_name, feature)['value']
 			attrdata = pickle.loads(binary_data)
-			atlasobj = atlas.get(atlas)
+			atlasobj = atlas.get(atlas_name)
 			attr = netattr.Attr(attrdata, atlasobj,scan, feature)
 			return attr
 		else:
-			print("can't find the document you look for. scan: %s, atlas: %s, feature: %s." % (scan, atlas, feature))
+			print("can't find the document you look for. scan: %s, atlas: %s, feature: %s." % (scan, atlas_name, feature))
 			raise NoRecordFoundException(scan)
 			return None
 
-	def get_net(self,scan, atlas, feature ):
+	def get_net(self,scan, atlas_name, feature):
 		#return to an net object directly
-		if self.exist_static(scan, atlas, feature ):
-			binary_data = self.query_static(scan, atlas, feature )['value']
+		if self.exist_static(scan, atlas_name, feature):
+			binary_data = self.query_static(scan, atlas_name, feature)['value']
 			netdata = pickle.loads(binary_data)
-			atlasobj = atlas.get(atlas)
+			atlasobj = atlas.get(atlas_name)
 			net = netattr.Net(netdata, atlasobj,scan, feature)
 			return net
 		else:
-			print("can't find the document you look for. scan: %s, atlas: %s, feature: %s." % (scan, atlas, feature))
+			print("can't find the document you look for. scan: %s, atlas: %s, feature: %s." % (scan, atlas_name, feature))
 			raise NoRecordFoundException(scan)
 			return None
 
