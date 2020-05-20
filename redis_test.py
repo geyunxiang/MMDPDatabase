@@ -30,7 +30,7 @@ STEP_SIZE=[1,3]
 
 def Inimongodb():#实验用mongodb数据库
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-    mydb = myclient["TotalData"]
+    mydb = myclient['Changgung']
     mycol = mydb["features"]
     for i in SCAN:
         for j in ATLAS:
@@ -42,7 +42,7 @@ def Inimongodb():#实验用mongodb数据库
                     x = mycol.insert_one(mydict)
 def Inimongodb_dynamic():
     myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-    mydb = myclient["TotalData"]
+    mydb = myclient['Changgung']
     mycol = mydb['dynamic_data']
     for i in DTNAMIC_SCAN:
             for j in DTNAMIC_FEATURE:
@@ -55,7 +55,7 @@ def Inimongodb_dynamic():
                                 path = r'E:\Features' + '\\' + i + '\\' + 'brodmann_lrce' + '\\' + j + '\\' + 'dynamic ' + str(l) + ' ' + str(k) + '\\' + 'inter-region_bc-' + str(n * l) + '.' + str(k + n * l) + '.csv'
                             if os.path.exists(path):
                                 arr = np.loadtxt(path, delimiter=',')
-                                mydict = {'data_source': 'Changgung','scan':i,'atlas':'brodmann_lrce','feature':j,'dynamic':1,'window_length':k,'step_size':l,'no':n,'value':pickle.dumps(arr)}
+                                mydict = {'data_source': 'Changgung','scan':i,'atlas':'brodmann_lrce','feature':j,'dynamic':1,'window_length':k,'step_size':l,'slice_num':n,'value':pickle.dumps(arr)}
                                 x = mycol.insert_one(mydict)
                             else:
                                 break
@@ -298,7 +298,7 @@ def nparray_test():
     print('running time: %s Seconds' % (end - start))
 
 if __name__ == '__main__':
-    #Inimongodb()
+    Inimongodb()
     #float_test()
     #error_test()
     #a.get_static_value()
@@ -308,13 +308,14 @@ if __name__ == '__main__':
     #size_test()
     #save_test()
     #nptest()
-    #Inimongodb_dynamic()
+    Inimongodb_dynamic()
     #cash_test()
     #dynamic_test()
     #pipe_safety_test()
     #print(a.exists_key('baihanxiang_20190307','aal','bold_interBC'))
     #hash_test()
     #nparray_test()
+    '''
     a=RedisDatabase()
     b={
         'a':1.01234,
@@ -326,5 +327,5 @@ if __name__ == '__main__':
     }
     a.set_hash_all('lalala',b)
     a.set_hash('lalala',c)
-    print(a.get_hash('lalala'))
+    print(a.get_hash('lalala'))'''
 

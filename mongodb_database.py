@@ -76,7 +76,7 @@ class MongoDBDatabase:
 	def query_dynamic(self,scan,atlas_name,feature,window_length,step_size):
 		dynamic_query = self.genarate_dynamic_query(scan, atlas_name, feature,window_length,step_size)
 		self.col=self.db['dynamic_data']
-		return self.col.find(dynamic_query).sort("no",1)
+		return self.col.find(dynamic_query).sort("slice_num",1)
 
 	def exist_static(self,scan, atlas_name, feature):
 		self.col=self.db['features']
