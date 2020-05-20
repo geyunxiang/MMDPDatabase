@@ -288,7 +288,7 @@ class RedisDatabase:
 		else:
 			self.hashdb.hset(name, item1, pickle.dumps(item2))
 	"""
-	Support three query function:
+	Support three query functions:
 		1.Return a hash with a given hash_name in Redis.
 		2.Return a value_list with a given hash_name and a key_list in Redis,
 			the value_list is the same sequence as key_list.
