@@ -64,11 +64,11 @@ def compare_loader_database():
 
 if __name__ == '__main__':
 	# test_cache()
-	# a = mmdpdb.MMDPDatabase()
-	# a.get_dynamic_feature('CMSA_01','brodmann_lrce','bold_net',22,1)
+	a = mmdpdb.MMDPDatabase()
+	a.get_dynamic_feature('CMSA_01','brodmann_lrce','bold_net',22,1)
 	# insert_mongo('BC', (100, 3))
 	# test_get_features()
 	# test_loader('BC', (100, 3))
 	# a = mmdpdb.MMDBDatabase()
 	# a.get_dynamic_feature('CMSA_01','brodmann_lrce','bold_net',22,1)
-	compare_loader_database()
+	#compare_loader_database()

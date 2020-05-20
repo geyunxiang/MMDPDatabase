@@ -31,7 +31,12 @@ class MMDPDatabase:
 		self.mdb = mongodb_database.MongoDBDatabase(data_source = data_source)
 		self.sdb = SQLiteDB()
 		self.data_source = data_source
-
+	"""
+	Designed for static networks and attributes query.
+	Using scan name , altasobj/altasobj name, feature name and data source(the default is Changgung) to query data from Redis.
+	If the data is not in Redis, try to query data from Mongodb and store the data in Redis.
+	If the query succeeds, return a Net or Attr class, if not, rasie an arror.
+	"""
 	def get_feature(self, scan_list, atlasobj, feature_name, data_source = 'Changgung'):
 		#wrong input check
 		return_single = False
@@ -56,7 +61,13 @@ class MMDPDatabase:
 			return ret_list[0]
 		else:
 			return ret_list
-
+	"""
+	Designed for dynamic networks and attributes query.
+	Using scan name , altasobj/altasobj name, feature name, window length, step size and data source(the default is Changgung) 
+		to query data from Redis.
+	If the data is not in Redis, try to query data from Mongodb and store the data in Redis.
+	If the query succeeds, return a DynamicNet or DynamicAttr class, if not, rasie an arror.
+	"""
 	def get_dynamic_feature(self, scan_list, atlasobj, feature_name, window_length, step_size, data_source = 'Changgung'):
 		return_single = False
 		if type(scan_list) is str:
