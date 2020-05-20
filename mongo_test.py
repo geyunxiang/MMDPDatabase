@@ -49,9 +49,6 @@ def generate_static_database_networks():
 				# print(e)
 				print('! not found! scan: %s, atlas: %s, network not found!' % (mriscan, atlas_name))
 
-				
-
-
 def generate_dynamic_database_attrs(dynamic_rootfolder):
 	database=mongodb_database.MongoDBDatabase('Changgung')
 	mriscans=os.listdir(dynamic_rootfolder)
@@ -69,7 +66,6 @@ def generate_dynamic_database_attrs(dynamic_rootfolder):
 					# print(e)
 					print('! not found! scans: %s, attr: %s not found!' % (mriscan, attrname))
 
-
 def generate_dynamic_database_networks(dynamic_rootfolder):
 	database=mongodb_database.MongoDBDatabase('Changgung')
 	mriscans=os.listdir(dynamic_rootfolder)
@@ -84,12 +80,6 @@ def generate_dynamic_database_networks(dynamic_rootfolder):
 			except OSError as e:
 				# print(e)
 				print('! not found! scan: %s  not found!' % (mriscan))
-
-
-
-
-
-
 
 def main():
 	mdb = mongodb_database.MongoDBDatabase(None)

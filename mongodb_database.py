@@ -100,11 +100,11 @@ class MongoDBDatabase:
 		comment_dict correspond to document['comment']
 		"""
 		# check if feature already exist
-		if self.exist_static(feature.scan, feature.atlasobj.name, feature.feature):
+		if self.exist_static(feature.scan, feature.atlasobj.name, feature.feature_name):
 			raise MultipleRecordException(feature.scan, 'Please check again.')
 		attrdata = pickle.dumps(feature.data)
 		self.col = self.db['features']
-		document= self.generate_static_document(feature.scan, feature.atlasobj.name, feature.feature, attrdata,comment_dict)
+		document= self.generate_static_document(feature.scan, feature.atlasobj.name, feature.feature_name, attrdata,comment_dict)
 		self.col.insert_one(document)
 
 	def remove_static_feature(self, scan, atlas_name, feature):
@@ -116,14 +116,14 @@ class MongoDBDatabase:
 		"""
 		attr is netattr.DynamicAttr
 		"""
-		if self.exist_dynamic(attr.scan,attr.atlasobj.name,attr.feature,attr.window_length,attr.step_size):
+		if self.exist_dynamic(attr.scan,attr.atlasobj.name,attr.feature_name,attr.window_length,attr.step_size):
 			raise MultipleRecordException(attr.scan, 'Please check again.')
 		self.col=self.db['dynamic_data']
 		for i in range(attr.data.shape[1]):
 			# i is the num of the column in data matrix
 			value=pickle.dumps(attr.data[:,i])
 			slice_num = i
-			document = self.generate_dynamic_document(attr.scan,attr.atlasobj.name,attr.feature,attr.window_length,attr.step_size,slice_num,value,comment_dict)
+			document = self.generate_dynamic_document(attr.scan,attr.atlasobj.name,attr.feature_name,attr.window_length,attr.step_size,slice_num,value,comment_dict)
 			self.col.insert_one(document)
 
 	def remove_dynamic_attr(self,scan,feature,window_length,step_size,atlas_name='brodmann_lrce'):
@@ -139,14 +139,14 @@ class MongoDBDatabase:
 		"""
 		net is netattr.DynamicNet
 		"""
-		if self.exist_dynamic(net.scan,net.atlasobj.name,net.feature,net.window_length,net.step_size):
+		if self.exist_dynamic(net.scan,net.atlasobj.name,net.feature_name,net.window_length,net.step_size):
 			raise MultipleRecordException(net.scan, 'Please check again.')
 		self.col=self.db['dynamic_data']
 		for i in range(net.data.shape[2]):
 			# i is the slice_num of the net
 			value=pickle.dumps(net.data[:,:,i])
 			slice_num=i
-			document=self.generate_dynamic_document(net.scan,net.atlasobj.name,net.feature,net.window_length,net.step_size,slice_num,value,comment_dict)
+			document=self.generate_dynamic_document(net.scan,net.atlasobj.name,net.feature_name,net.window_length,net.step_size,slice_num,value,comment_dict)
 			self.col.insert_one(document)
 
 	def remove_dynamic_network(self,scan,window_length,step_size,atlas_name='brodmann_lrce',feature='BOLD.net'):

@@ -1,3 +1,4 @@
+import numpy as np
 import mmdpdb, mongodb_database
 from mmdps.proc import loader, atlas
 from mmdps.util import loadsave
@@ -43,8 +44,8 @@ def test_loader(feat_name, dynamic_conf):
 	print(CMSA_dFeat[0].data.shape)
 
 def test_get_features():
-	db = mmdpdb.MMDPDatabase(data_source = 'MSA')
-	feat = db.get_dynamic_feature('CMSA_01', 'brodmann_lrce', 'BOLD.BC', 100, 3, data_source = 'MSA')
+	db = mmdpdb.MMDPDatabase(data_source = 'Changgung')
+	feat = db.get_feature('chenyifan_20150629', 'brodmann_lrce', 'BOLD.BC')
 
 	# mdb = mongodb_database.MongoDBDatabase(data_source = 'MSA')
 	# feat = mdb.query_dynamic('MSA', 'CMSA_01', 'brodmann_lrce', 'BOLD.BC', 100, 3, slice_num = 1)
@@ -52,12 +53,22 @@ def test_get_features():
 	print(feat.scan)
 	print(feat.data.shape)
 
+def compare_loader_database():
+	db = mmdpdb.MMDPDatabase(data_source = 'Changgung')
+	feat = db.get_feature('chenyifan_20150629', 'brodmann_lrce', 'BOLD.BC')
+	feat_loader = loader.load_attrs(['chenyifan_20150629'], 'brodmann_lrce', 'BOLD.BC')[0]
+	print(feat_loader.scan)
+	print(feat_loader.data.shape)
+	diff = np.abs(feat.data - feat_loader.data)
+	print('maxdiff: ', np.max(diff))
+
 if __name__ == '__main__':
 	# test_cache()
 	# a = mmdpdb.MMDPDatabase()
 	# a.get_dynamic_feature('CMSA_01','brodmann_lrce','bold_net',22,1)
 	# insert_mongo('BC', (100, 3))
-	test_get_features()
-	test_loader('BC', (100, 3))
-	a = mmdpdb.MMDBDatabase()
-	a.get_dynamic_feature('CMSA_01','brodmann_lrce','bold_net',22,1)
+	# test_get_features()
+	# test_loader('BC', (100, 3))
+	# a = mmdpdb.MMDBDatabase()
+	# a.get_dynamic_feature('CMSA_01','brodmann_lrce','bold_net',22,1)
+	compare_loader_database()
