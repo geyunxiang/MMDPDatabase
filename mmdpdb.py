@@ -125,7 +125,9 @@ class MMDPDatabase:
 		"""
 		Save list from redis to MongoDB
 		"""
-		pass
+		a = self.get_cache_list(cache_key)
+		self.mdb.put_temp_data(a,cache_key)
+
 
 	def delete_cache_list(self, cache_key):
 		"""
