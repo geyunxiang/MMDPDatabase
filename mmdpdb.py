@@ -31,13 +31,14 @@ class MMDPDatabase:
 		self.mdb = mongodb_database.MongoDBDatabase(data_source = data_source)
 		self.sdb = SQLiteDB()
 		self.data_source = data_source
-	"""
-	Designed for static networks and attributes query.
-	Using scan name , altasobj/altasobj name, feature name and data source(the default is Changgung) to query data from Redis.
-	If the data is not in Redis, try to query data from Mongodb and store the data in Redis.
-	If the query succeeds, return a Net or Attr class, if not, rasie an arror.
-	"""
-	def get_feature(self, scan_list, atlasobj, feature_name, data_source = 'Changgung'):
+
+	def get_feature(self, scan_list, atlasobj, feature_name):
+		"""
+		Designed for static networks and attributes query.
+		Using scan name , altasobj/altasobj name, feature name and data source(the default is Changgung) to query data from Redis.
+		If the data is not in Redis, try to query data from Mongodb and store the data in Redis.
+		If the query succeeds, return a Net or Attr class, if not, rasie an arror.
+		"""
 		#wrong input check
 		return_single = False
 		if type(scan_list) is str:
@@ -47,13 +48,13 @@ class MMDPDatabase:
 			atlasobj = atlasobj.name
 		ret_list = []
 		for scan in scan_list:
-			res = self.rdb.get_static_value(data_source, scan, atlasobj, feature_name)
+			res = self.rdb.get_static_value(self.data_source, scan, atlasobj, feature_name)
 			if res is not None:
 				ret_list.append(res)
 			else:
 				doc = self.mdb.query_static(scan, atlasobj, feature_name)
 				if doc.count() != 0:
-					ret_list.append(self.rdb.set_value(doc[0],data_source))
+					ret_list.append(self.rdb.set_value(doc[0],self.data_source))
 				else:
 					raise mongodb_database.NoRecordFoundException('No such item in redis and mongodb: ' + scan + ' ' + atlasobj + ' ' + feature_name)
 					# raise Exception('No such item in redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name)
@@ -61,14 +62,15 @@ class MMDPDatabase:
 			return ret_list[0]
 		else:
 			return ret_list
-	"""
-	Designed for dynamic networks and attributes query.
-	Using scan name , altasobj/altasobj name, feature name, window length, step size and data source(the default is Changgung) 
-		to query data from Redis.
-	If the data is not in Redis, try to query data from Mongodb and store the data in Redis.
-	If the query succeeds, return a DynamicNet or DynamicAttr class, if not, rasie an arror.
-	"""
-	def get_dynamic_feature(self, scan_list, atlasobj, feature_name, window_length, step_size, data_source = 'Changgung'):
+
+	def get_dynamic_feature(self, scan_list, atlasobj, feature_name, window_length, step_size):
+		"""
+		Designed for dynamic networks and attributes query.
+		Using scan name , altasobj/altasobj name, feature name, window length, step size and data source(the default is Changgung)
+			to query data from Redis.
+		If the data is not in Redis, try to query data from Mongodb and store the data in Redis.
+		If the query succeeds, return a DynamicNet or DynamicAttr class, if not, rasie an arror.
+		"""
 		return_single = False
 		if type(scan_list) is str:
 			scan_list = [scan_list]
@@ -77,13 +79,13 @@ class MMDPDatabase:
 			atlasobj = atlasobj.name
 		ret_list = []
 		for scan in scan_list:
-			res = self.rdb.get_dynamic_value(data_source, scan, atlasobj, feature_name, window_length, step_size)
+			res = self.rdb.get_dynamic_value(self.data_source, scan, atlasobj, feature_name, window_length, step_size)
 			if res is not None:
 				ret_list.append(res)
 			else:
 				doc = self.mdb.query_dynamic(scan, atlasobj, feature_name, window_length, step_size)
 				if doc.count() != 0:
-					mat = self.rdb.set_value(doc,data_source)
+					mat = self.rdb.set_value(doc,self.data_source)
 					ret_list.append(mat)
 				else:
 					raise mongodb_database.NoRecordFoundException('No such item in redis or mongodb: ' + scan + ' ' + atlasobj + ' ' + feature_name + ' ' + str(window_length) + ' ' + str(step_size))
