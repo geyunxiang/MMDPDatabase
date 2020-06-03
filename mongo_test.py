@@ -9,7 +9,7 @@ from mmdps.proc import atlas, loader
 
 atlas_list = ['brodmann_lr', 'brodmann_lrce', 'aal', 'aicha', 'bnatlas']
 attr_list_full = ['BOLD.BC', 'BOLD.CCFS', 'BOLD.LE', 'BLD.WD', 'BOLD.net', 'DWI.FA', 'DWI.MD', 'DWI.net']
-attr_list = ['BOLD.BC', 'BOLD.CCFS', 'BOLD.LE', 'BOLD.WD', 'BOLD.net']
+attr_list = ['BOLD.BC.inter', 'BOLD.CCFS.inter', 'BOLD.LE.inter', 'BOLD.WD.inter', 'BOLD.net']
 dynamic_attr_list=['inter-region_bc','inter-region_ccfs','inter-region_le','inter-region_wd']
 dynamic_conf_list=[[22,1],[50,1],[100,1],[100,3]]
 
@@ -29,7 +29,7 @@ def generate_static_database_attrs():
 				try:
 					attr = loader.load_attrs([mriscan], atlasobj, attr_name)
 					database.save_static_feature(attr[0])
-					print('ok! scan: %s, atlas: %s, attr: %s ok!' % (mriscan, atlas_name, attr_name))
+					# print('ok! scan: %s, atlas: %s, attr: %s ok!' % (mriscan, atlas_name, attr_name))
 				except OSError as e:
 					# print(e)
 					print('! not found! scan: %s, atlas: %s, attr: %s not found!' % (mriscan, atlas_name, attr_name))
@@ -44,7 +44,7 @@ def generate_static_database_networks():
 				net = loader.load_single_network(mriscan, atlasobj)
 				# print(net.feature_name)
 				database.save_static_feature(net)
-				print('ok! scan: %s, atlas: %s, network ok!' % (mriscan, atlas_name))
+				# print('ok! scan: %s, atlas: %s, network ok!' % (mriscan, atlas_name))
 			except OSError as e:
 				# print(e)
 				print('! not found! scan: %s, atlas: %s, network not found!' % (mriscan, atlas_name))
