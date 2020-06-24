@@ -24,6 +24,25 @@ from mmdps import rootconfig
 
 # from . import mongodb_database, redis_database
 import mongodb_database, redis_database
+from Cryptodome.Cipher import AES
+from Cryptodome import Random
+
+class AESCoding:
+	def __init__(self, tkey = b'this is a 16 key'):
+		#you can change the mode here, there are five mode for you to choose,
+		#CBC ECB CTR OCF CFB, CTR is not suggested
+		#If you change into a different mode, you need to rewrite AESCoding,
+		#because for different coding mode, the operation is not the same.
+		if (type(tkey) is not bytes):
+			tkey= tkey.encode()
+		self.key = tkey
+		self.iv = Random.new().read(AES.block_size)
+		self.mycipher = AES.new(self.key, AES.MODE_CFB, self.iv)
+	def encode(self, data):
+		return self.iv + self.mycipher.encrypt(data.encode())
+	def decode(self, data, tkey):
+		mydecrypt = AES.new(tkey, AES.MODE_CFB, data[:16])
+		return mydecrypt.decrypt(data[16:]).decode()
 
 class MMDPDatabase:
 	def __init__(self, data_source = 'Changgung'):
@@ -46,6 +65,9 @@ class MMDPDatabase:
 			return_single = True
 		if type(atlasobj) is atlas.Atlas:
 			atlasobj = atlasobj.name
+
+		if (not (type(scan_list) is list or type(scan_list) is str) or type(atlasobj) is not str or type(feature_name) is not str):
+			raise Exception("Please input in the format as follows : scan must be str or a list of str, atlas and feature must be str")
 		ret_list = []
 		for scan in scan_list:
 			res = self.rdb.get_static_value(self.data_source, scan, atlasobj, feature_name)
@@ -77,6 +99,8 @@ class MMDPDatabase:
 			return_single = True
 		if type(atlasobj) is atlas.Atlas:
 			atlasobj = atlasobj.name
+		if (not (type(scan_list) is list or type(scan_list) is str) or type(atlasobj) is not str or type(feature_name) is not str or type(window_length) is not int or type(step_size) is not int):
+			raise Exception("Please input in the format as follows : scan must be str or a list of str, atlas and feature must be str, window length and step size must be int")
 		ret_list = []
 		for scan in scan_list:
 			res = self.rdb.get_dynamic_value(self.data_source, scan, atlasobj, feature_name, window_length, step_size)
@@ -106,6 +130,8 @@ class MMDPDatabase:
 		"""
 		Store a list to redis as cache with cache_key
 		"""
+		if (type(cache_key) is not str or not all((type(x) is int or type(x) is float) for x in value)):
+			raise Exception("Please input in the format as follows : key must be str, value must be a list of float or int")
 		self.rdb.set_list_all_cache(cache_key, value)
 
 	def append_cache_list(self, cache_key, value):
@@ -113,6 +139,8 @@ class MMDPDatabase:
 		Append value to a list in redis with cache_key.
 		If the given key is empty in redis, a new list will be created.
 		"""
+		if (type(cache_key) is not str or not (type(value) is int or type(value) is float)):
+			raise Exception("Please input in the format as follows : key mast be str, value must be int or float")
 		self.rdb.set_list_cache(cache_key, value)
 
 	def get_cache_list(self, cache_key):
@@ -126,6 +154,7 @@ class MMDPDatabase:
 		Save list from redis to MongoDB
 		"""
 		a = self.get_cache_list(cache_key)
+		#self.rdb.delete_key_cache(cache_key)
 		self.mdb.put_temp_data(a,cache_key)
 
 

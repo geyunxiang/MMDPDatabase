@@ -5,6 +5,7 @@ import json
 import pymongo
 import pickle
 import time
+import base64
 from redis_database import RedisDatabase
 #from mongodb_database import MongoDBDatabase
 from mmdps.proc import netattr, atlas, loader
@@ -243,6 +244,15 @@ def pipe_safety_test():
         pipe.set(str(i),str(i))
     print('OK')
     pipe.execute()
+def encode_test():
+    s = 'hello, world'
+    s = "你好"
+    bs = base64.b64encode(s.encode("utf8"))
+    print(bs)
+
+    decode = base64.b64decode(bs)
+    print(decode)
+    print(decode.decode("utf8"))
 def error_fun_test():
     try:
         error_test()
@@ -296,9 +306,13 @@ def nparray_test():
         value=value.swapaxes(0,2).swapaxes(0,1)
     end = time.perf_counter()
     print('running time: %s Seconds' % (end - start))
+def file_creater(size):
+    for i in range(size):
+        a = np.random.rand(100,100)
+        np.savetxt('../Feature/'+str(i)+'.csv',a)
 
 if __name__ == '__main__':
-    Inimongodb()
+    #Inimongodb()
     #float_test()
     #error_test()
     #a.get_static_value()
@@ -308,24 +322,12 @@ if __name__ == '__main__':
     #size_test()
     #save_test()
     #nptest()
-    Inimongodb_dynamic()
+    #Inimongodb_dynamic()
     #cash_test()
     #dynamic_test()
     #pipe_safety_test()
     #print(a.exists_key('baihanxiang_20190307','aal','bold_interBC'))
     #hash_test()
     #nparray_test()
-    '''
-    a=RedisDatabase()
-    b={
-        'a':1.01234,
-        'b':{'c':1.345}
-    }
-    c={
-        'a':1.01234,
-        'b':{'c':1.345}
-    }
-    a.set_hash_all('lalala',b)
-    a.set_hash('lalala',c)
-    print(a.get_hash('lalala'))'''
-
+    #encode_test()
+    file_creater(10)

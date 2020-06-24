@@ -62,14 +62,19 @@ def compare_loader_database():
 	diff = np.abs(feat.data - feat_loader.data)
 	print('maxdiff: ', np.max(diff))
 
+
 if __name__ == '__main__':
 	# test_cache()
-	a = mmdpdb.MMDPDatabase()
-	b = a.get_dynamic_feature('CMSA_01','brodmann_lrce','bold_net',22,1)
-	print(b.data.shape)
+	#a = mmdpdb.MMDPDatabase()
+	#b = a.get_dynamic_feature(['123'],'123','123',1,'2')
+	#print(b[0].data.shape)
 	# insert_mongo('BC', (100, 3))
 	# test_get_features()
 	# test_loader('BC', (100, 3))
 	# a = mmdpdb.MMDBDatabase()
 	# a.get_dynamic_feature('CMSA_01','brodmann_lrce','bold_net',22,1)
 	#compare_loader_database()
+	a = mmdpdb.AESCoding(b'this is a 16 keythis is ')
+	b = a.encode("hello world")
+	print(len(b))
+	print(a.decode(b,b'this is a 16 keythis is '))
