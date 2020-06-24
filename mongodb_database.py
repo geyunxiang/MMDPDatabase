@@ -39,12 +39,13 @@ class MongoDBDatabase:
 	docstring for MongoDBDatabase
 	parameter data_source: 	the only non-default parameter of constructor function
 	parameter scan :		mriscan 
-	parameter atlas : 		name of atlas
+	parameter atlas_name : 		name of atlas
 	parameter feature : 	name of feature file
 	parameter dynamic : 	0/1
 	parameter window_length : window_length
 	parameter step_size : 	step_size
 	parameter slice_num : 	the number of slice in a sequence
+	parameter comment: default {}
 	"""
 
 	def __init__(self, data_source, host = 'localhost', port = 27017, col = 'features', password = ''):
@@ -57,41 +58,41 @@ class MongoDBDatabase:
 
 	"""
 	use data_source as the name of database
-	default collection : features;
+	default collection : 'features'
 	"""
 
-	def generate_static_query(self,scan, atlas_name, feature):
-		static_query=dict(data_source=self.data_source,scan=scan,atlas=atlas_name,feature=feature,dynamic=0)
+	def generate_static_query(self, scan, atlas_name,feature,comment_dict={}):
+		static_query=dict(data_source = self.data_source,scan = scan,atlas=atlas_name,feature=feature,dynamic=0,comment=comment_dict)
 		return static_query
 
-	def genarate_dynamic_query(self,scan, atlas_name, feature,window_length,step_size):
-		dynamic_query=dict(data_source=self.data_source,scan=scan,atlas=atlas_name,feature=feature,dynamic=1,window_length=window_length,step_size=step_size)
+	def genarate_dynamic_query(self,scan, atlas_name, feature,window_length,step_size,comment_dict={}):
+		dynamic_query=dict(data_source=self.data_source,scan=scan,atlas=atlas_name,feature=feature,dynamic=1,window_length=window_length,step_size=step_size,comment=comment_dict)
 		return dynamic_query
 
-	def query_static(self,scan, atlas_name, feature):
-		static_query= self.generate_static_query(scan, atlas_name, feature)
+	def query_static(self,scan, atlas_name, feature,comment_dict={}):
+		static_query= self.generate_static_query(scan, atlas_name, feature,comment_dict)
 		self.col=self.db['features']
 		return self.col.find(static_query)
 
-	def query_dynamic(self,scan,atlas_name,feature,window_length,step_size):
-		dynamic_query = self.genarate_dynamic_query(scan, atlas_name, feature,window_length,step_size)
+	def query_dynamic(self,scan,atlas_name,feature,window_length,step_size,comment_dict={}):
+		dynamic_query = self.genarate_dynamic_query(scan, atlas_name, feature,window_length,step_size,comment_dict)
 		self.col=self.db['dynamic_data']
 		return self.col.find(dynamic_query).sort("slice_num",1)
 
-	def exist_static(self,scan, atlas_name, feature):
+	def exist_static(self,scan, atlas_name, feature,comment_dict={}):
 		self.col=self.db['features']
-		return self.col.count_documents(self.generate_static_query(scan, atlas_name, feature))
+		return self.col.count_documents(self.generate_static_query(scan, atls_name, feature,comment_dict))
 
-	def exist_dynamic(self,scan, atlas_name, feature,window_length,step_size):
+	def exist_dynamic(self,scan, atlas_name, feature,window_length,step_size,comment_dict={}):
 		self.col=self.db['dynamic_data']
-		return self.col.count_documents(self.genarate_dynamic_query(scan, atlas_name, feature,window_length,step_size))
+		return self.col.count_documents(self.genarate_dynamic_query(scan, atlas_name, feature,window_length,step_size,comment_dict))
 
-	def generate_static_document(self,scan, atlas_name, feature, value, comment=''):
-		static_document=dict(data_source=self.data_source,scan=scan,atlas=atlas_name,feature=feature,dynamic=0,value=value,comment=comment)
+	def generate_static_document(self,scan, atlas_name, feature, value, comment_dict={}):
+		static_document=dict(data_source=self.data_source,scan=scan,atlas=atlas_name,feature=feature,dynamic=0,value=value,comment=comment_dict)
 		return static_document
 
-	def generate_dynamic_document(self,scan, atlas_name, feature, window_length, step_size, slice_num,value,comment=''):
-		dynamic_document=dict(data_source=self.data_source,scan=scan,atlas=atlas_name,feature=feature,dynamic=1,window_length=window_length,step_size=step_size,slice_num=slice_num,value=value,comment=comment)
+	def generate_dynamic_document(self,scan, atlas_name, feature, window_length, step_size, slice_num,value,comment_dict={}):
+		dynamic_document=dict(data_source=self.data_source,scan=scan,atlas=atlas_name,feature=feature,dynamic=1,window_length=window_length,step_size=step_size,slice_num=slice_num,value=value,comment=comment_dict)
 		return dynamic_document
 
 	def save_static_feature(self,feature,comment_dict={}):
