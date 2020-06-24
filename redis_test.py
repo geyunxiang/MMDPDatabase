@@ -307,9 +307,14 @@ def nparray_test():
     end = time.perf_counter()
     print('running time: %s Seconds' % (end - start))
 def file_creater(size):
+    myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+    mydb = myclient['test']
+    mycol = mydb['dynamic_data']
     for i in range(size):
         a = np.random.rand(100,100)
-        np.savetxt('../Feature/'+str(i)+'.csv',a)
+        mydict = {'scan': 'test_scan', 'atlas': 'test_atlas', 'feature': 'test_feature', 'dynamic': 1,
+                  'window_length': size, 'step_size': 1, 'slice_num': i, 'value': pickle.dumps(a)}
+        mycol.insert_one(mydict)
 
 if __name__ == '__main__':
     #Inimongodb()

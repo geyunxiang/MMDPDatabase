@@ -2,6 +2,7 @@ import numpy as np
 import mmdpdb, mongodb_database
 from mmdps.proc import loader, atlas
 from mmdps.util import loadsave
+import time,pymongo,pickle
 
 SCAN =['baihanxiang_20190307','caipinrong_20180412','baihanxiang_20190211','caochangsheng_20161027',
        'caochangsheng_20161114','chenguwen_20150711','chenhua_20150711','chenyifan_20150612',
@@ -62,6 +63,24 @@ def compare_loader_database():
 	diff = np.abs(feat.data - feat_loader.data)
 	print('maxdiff: ', np.max(diff))
 
+def file_creater(size):
+	myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+	mydb = myclient['test']
+	mycol = mydb['dynamic_data']
+	for i in range(size):
+		a = np.random.rand(100,100)
+		mydict = {'data_source' : 'test', 'scan': 'test_scan', 'atlas': 'aal', 'feature': 'test_feature', 'dynamic': 1,
+                  'window_length': size, 'step_size': 1, 'slice_num': i, 'value': pickle.dumps(a)}
+		mycol.insert_one(mydict)
+		np.savetxt('../Feature/'+str(i)+'.csv',a)
+def mmdpdb_speed_test(size):
+	a = mmdpdb.MMDPDatabase('test')
+	start = time.perf_counter()
+	a.get_dynamic_feature('test_scan','aal','test_feature',size,1)
+	end = time.perf_counter()
+	print('mmdpdb running time is : %s s' %end-start)
+def loader_speed_test(size):
+
 
 if __name__ == '__main__':
 	# test_cache()
@@ -74,7 +93,5 @@ if __name__ == '__main__':
 	# a = mmdpdb.MMDBDatabase()
 	# a.get_dynamic_feature('CMSA_01','brodmann_lrce','bold_net',22,1)
 	#compare_loader_database()
-	a = mmdpdb.AESCoding(b'this is a 16 keythis is ')
-	b = a.encode("hello world")
-	print(len(b))
-	print(a.decode(b,b'this is a 16 keythis is '))
+	file_creater(100)
+	mmdpdb_speed_test(100)
