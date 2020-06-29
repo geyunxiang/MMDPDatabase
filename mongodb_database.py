@@ -49,17 +49,15 @@ class MongoDBDatabase:
 	"""
 
 	def __init__(self, data_source, host = 'localhost', port = 27017, col = 'features', password = ''):
+		"""
+		use data_source as the name of database
+		default collection : 'features'
+		"""
 		self.data_source = data_source
 		self.client = pymongo.MongoClient(host, port)
 		self.db = self.client[data_source]
 		self.col = self.db[col]
-		self.temp_db = self.client['Temp-database']
-		self.temp_collection = self.temp_db['Temp-collection']
-
-	"""
-	use data_source as the name of database
-	default collection : 'features'
-	"""
+		self.temp_collection = self.db['Temp-features']
 
 	def generate_static_query(self, scan, atlas_name,feature,comment_dict={}):
 		static_query=dict(data_source = self.data_source,scan = scan,atlas=atlas_name,feature=feature,dynamic=0,comment=comment_dict)
@@ -81,7 +79,7 @@ class MongoDBDatabase:
 
 	def exist_static(self,scan, atlas_name, feature,comment_dict={}):
 		self.col=self.db['features']
-		return self.col.count_documents(self.generate_static_query(scan, atls_name, feature,comment_dict))
+		return self.col.count_documents(self.generate_static_query(scan, atlas_name, feature,comment_dict))
 
 	def exist_dynamic(self,scan, atlas_name, feature,window_length,step_size,comment_dict={}):
 		self.col=self.db['dynamic_data']
@@ -186,36 +184,36 @@ class MongoDBDatabase:
 			raise NoRecordFoundException(scan)
 			return None
 
-	def put_temp_data(self, temp_data, name, description = None):
+	def put_temp_data(self, temp_data, description_dict, overwrite = False):
 		"""
 		Insert temporary data into MongoDB. 
-		Input temp_data as a serializable object (like np.array) and name as a string.
-		The description argument is optional
+		Input temp_data as a serializable object (like np.array).
+		The description_dict should be a dict whose keys do not contain 'value', which is used to store serialized data
 		"""
-		# check if name is already in temp database
-		if self.temp_collection.count_documents(dict(name = name)) > 0:
-			raise MultipleRecordException(name, 'Please consider a new name')
-		document = dict(value = pickle.dumps(temp_data), name = name, description = description)
-		self.temp_collection.insert_one(document)
+		# check if record already exists, given description_dict
+		count = self.temp_collection.count_documents(description_dict)
+		if count > 0 and not overwrite:
+			raise MultipleRecordException(description_dict, 'Please consider a new name')
+		elif count > 0 and overwrite:
+			self.temp_collection.delete_many(description_dict)
+		description_dict.update(dict(value = pickle.dumps(temp_data)))
+		self.temp_collection.insert_one(description_dict)
 
-	def get_temp_data(self, name):
+	def get_temp_data(self, description_dict):
 		"""
-		Get temporary data with name
-		Return a dict with keys = value:np.array, name:str, description:str
+		Get temporary data with description_dict
+		Return a dict with value:temp_data (de-serialized)
 		"""
-		result = self.temp_collection.find_one(dict(name = name))
+		result = self.temp_collection.find_one(description_dict)
 		result['value'] = pickle.loads(result['value'])
 		return result
 
-	def remove_temp_data(self, name):
+	def remove_temp_data(self, description_dict = {}):
 		"""
-		Delete all temp records with the input name
+		Delete all temp records according to description_dict
 		If None is input, delete all temp data
 		"""
-		if name is None:
-			self.temp_collection.delete_many({})
-		else:
-			self.temp_collection.delete_many(dict(name = name))
+		self.temp_collection.delete_many(description_dict)
 
 
 class MultipleRecordException(Exception):
