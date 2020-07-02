@@ -7,6 +7,7 @@ import pickle
 import time
 import base64
 from redis_database import RedisDatabase
+import threading
 #from mongodb_database import MongoDBDatabase
 from mmdps.proc import netattr, atlas, loader
 from mmdps import rootconfig
@@ -315,6 +316,13 @@ def file_creater(size):
         mydict = {'scan': 'test_scan', 'atlas': 'test_atlas', 'feature': 'test_feature', 'dynamic': 1,
                   'window_length': size, 'step_size': 1, 'slice_num': i, 'value': pickle.dumps(a)}
         mycol.insert_one(mydict)
+def thread_test():
+    a = RedisDatabase()
+    def run(scan):
+        a.get_static_value('Changgung',scan,'aal','bold_interBC')
+    for i in SCAN:
+        t = threading.Thread()
+
 
 if __name__ == '__main__':
     #Inimongodb()

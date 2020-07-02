@@ -50,7 +50,7 @@ class RedisDatabase:
 			raise Exception('Unble to start redis, error message: ' + str(e))
 		try:
 			self.datadb = StrictRedis(host='localhost', port=6379, db=0)
-			self.cachedb = StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
+			self.cachedb = StrictRedis(host='localhost', port=6379, db=1)
 			self.hashdb = StrictRedis(host='localhost', port=6379, db=2)
 		except Exception as e:
 			raise Exception('Redis connection failed，error message:' + str(e))
@@ -212,7 +212,7 @@ class RedisDatabase:
 		"""
 		self.cachedb.delete(key)
 		for i in value:
-			self.cachedb.rpush(key, i)
+			self.cachedb.rpush(key, pickle.dumps(i))
 		#self.cachedb.save()
 		return self.cachedb.llen(key)
 
@@ -221,7 +221,7 @@ class RedisDatabase:
 		Append value to a list as the last one in Redis with cache_key.
 		If the given key is empty in Redis, a new list will be created.
 		"""
-		self.cachedb.rpush(key,value)
+		self.cachedb.rpush(key, pickle.dumps(value))
 		#self.cachedb.save()
 		return self.cachedb.llen(key)
 
@@ -232,10 +232,7 @@ class RedisDatabase:
 		res = self.cachedb.lrange(key, start, end)
 		lst=[]
 		for x in res:
-			if x.isdigit():
-				lst.append(int(x))
-			else:
-				lst.append(float(x))
+				lst.append(pickle.loads(x))
 		return lst
 
 	def exists_key_cache(self, key):
