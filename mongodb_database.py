@@ -29,7 +29,6 @@ dynamic document
 	"comment": {"...descriptive str..."}
 }
 '''
-
 import pymongo
 import pickle
 from mmdps.proc import atlas, netattr
@@ -94,15 +93,15 @@ class MongoDBDatabase:
             print("please input correct mode")
         return self.col
 
-    def get_query(self, mode, scan, atlas_name, feature, window_length=None, step_size=None):
+    def get_query(self, mode, scan, atlas_name, feature, comment={}, window_length=None, step_size=None):
         """ generate dynamic or static query """
         query = {}
         if mode == 'static':
             query = dict(data_source=self.data_source, scan=scan,
-                         atlas=atlas_name, feature=feature, dynamic=0)
+                         atlas=atlas_name, feature=feature, dynamic=0, comment=comment)
         elif mode == 'dynamic':
             query = dict(data_source=self.data_source, scan=scan, atlas=atlas_name, feature=feature,
-                         dynamic=1, window_length=window_length, step_size=step_size,)
+                         dynamic=1, window_length=window_length, step_size=step_size, comment=comment)
         return query
 
     def get_document(self, mode, scan, atlas_name, feature, value, comment={}, window_length=None, step_size=None, slice_num=None):
@@ -123,92 +122,87 @@ class MongoDBDatabase:
         """ Query with 3 main keys """
         return self.getCol(mode).find(dict(scan=scan, atlas=atlas_name, feature=feature))
 
-    def total_query(self, mode, scan, atlas_name, feature, window_length=None, step_size=None):
+    def total_query(self, mode, scan, atlas_name, feature, comment={}, window_length=None, step_size=None):
         query = self.get_query(mode, scan, atlas_name,
-                               feature, window_length, step_size)
+                               feature, comment, window_length, step_size)
         document = self.getCol(mode).find(query)
         if mode == 'dynamic':
             self.getCol(mode).find(query).sort("slice_num", 1)
         return document
 
-    def exist_query(self, mode, scan, atlas_name, feature, window_length=None, step_size=None):
+    def exist_query(self, mode, scan, atlas_name, feature, comment={}, window_length=None, step_size=None):
         """ Check a record if exist """
         query = self.get_query(mode, scan, atlas_name,
-                               feature, window_length, step_size)
+                               feature, comment, window_length, step_size)
         return self.getCol(mode).find_one(query)
 
     def save_static_feature(self, feature, comment={}):
         """
         feature could be netattr.Net or netattr.Attr
         """
-        mode = 'static'
-        if self.exist_query(mode, feature.scan, feature.atlasobj.name, feature.feature_name) != None:
+        if self.exist_query('static', feature.scan, feature.atlasobj.name, feature.feature_name, comment) != None:
             raise MultipleRecordException(feature.scan, 'Please check again.')
         attrdata = pickle.dumps(feature.data)
         document = self.get_document(
-            mode, feature.scan, feature.atlasobj.name, feature.feature.name, attrdata, comment)
-        self.getCol(mode).insert_one(document)
+            'static', feature.scan, feature.atlasobj.name, feature.feature.name, attrdata, comment)
+        self.db['features'].insert_one(document)
 
-    def remove_static_feature(self, scan, atlas_name, feature):
-        mode = 'static'
-        self.getCol(mode).find_one_and_delete(
-            self.main_query(mode, scan, atlas_name, feature))
+    def remove_static_feature(self, scan, atlas_name, feature, comment={}):
+        query = self.total_query('static', scan, atlas_name, feature, comment)
+        self.db['features'].find_one_and_delete(query)
 
     def save_dynamic_attr(self, attr, comment={}):
         """
         Attr is a netattr.DynamicAttr instance
         """
-        mode = 'dynamic'
-        if self.exist_query(mode, attr.scan, attr.atlasobj.name, attr.feature_name, attr.window_length, attr.step_size):
+        if self.exist_query('dynamic', attr.scan, attr.atlasobj.name, attr.feature_name, comment, attr.window_length, attr.step_size) != None:
             raise MultipleRecordException(attr.scan, 'Please check again.')
         for i in range(attr.data.shape[1]):
             # i is the num of the column in data matrix
             value = pickle.dumps(attr.data[:, i])
             slice_num = i
             document = self.get_document(
-                mode, attr.scan, attr.atlasobj.name, attr.feature_name, value, comment, attr.window_length, attr.step_size, slice_num)
-            self.getCol(mode).insert_one(document)
+                'dynamic', attr.scan, attr.atlasobj.name, attr.feature_name, value, comment, attr.window_length, attr.step_size, slice_num)
+            self.db['dynamic_data'].insert_one(document)
 
-    def remove_dynamic_attr(self, scan, feature, window_length, step_size, atlas_name='brodmann_lrce'):
+    def remove_dynamic_attr(self, scan, atlas_name, feature, window_length, step_size, comment={}):
         """
         Fiter and delete all the slice in dynamic_attr
         Default atlas is brodmann_lrce
         """
-        mode = 'dynamic'
-        self.getCol(mode).delete_many(self.get_query(
-            mode, scan, atlas_name, feature, window_length, step_size))
+        query = self.total_query(
+            'dynamic', scan, atlas_name, feature, comment, window_length, step_size)
+        self.db['dynamic_data'].delete_many(query)
 
     def save_dynamic_network(self, net, comment={}):
         """
         Net is a netattr.DynamicNet instance
         """
-        mode = 'dynamic'
-        if self.exist_query(mode, net.scan, net.atlasobj.name, net.feature_name, net.window_length, net.step_size):
+        if self.exist_query('dynamic', net.scan, net.atlasobj.name, net.feature_name, comment, net.window_length, net.step_size) != None:
             raise MultipleRecordException(net.scan, 'Please check again.')
         for i in range(net.data.shape[2]):
             # i is the slice_num of the net
             value = pickle.dumps(net.data[:, :, i])
             slice_num = i
             document = self.get_document(
-                mode, net.scan, net.atlasobj.name, net.feature_name, value, comment, net.window_length, net.step_size, slice_num)
-            self.getCol(mode).insert_one(document)
+                'dynamic', net.scan, net.atlasobj.name, net.feature_name, value, comment, net.window_length, net.step_size, slice_num)
+            self.db['dynamic_data'].insert_one(document)
 
-    def remove_dynamic_network(self, scan, window_length, step_size, atlas_name='brodmann_lrce', feature='BOLD.net'):
+    def remove_dynamic_network(self, scan, atlas_name, feature, window_length, step_size, comment={}):
         """
         Fiter and delete all the slice in dynamic_network
         Default atlas is bromann_lrce 
         Default feature is BOLD.net
         """
-        mode = 'dynamic'
-        self.getCol(mode).delete_many(self.get_query(
-            mode, scan, atlas_name, feature, window_length, step_size))
+        query = self.total_query(
+            'dynamic', scan, atlas_name, feature, comment, window_length, step_size)
+        self.db['dynamic_data'].delete_many(query)
 
     def get_static_attr(self, scan, atlas_name, feature):
         # Return to an attr object  directly
-        mode = 'static'
-        if self.exist_query(mode, scan, atlas_name, feature):
+        if self.exist_query('static', scan, atlas_name, feature):
             binary_data = self.main_query(
-                mode, scan, atlas_name, feature)['value']
+                'static', scan, atlas_name, feature)['value']
             attrdata = pickle.loads(binary_data)
             atlasobj = atlas.get(atlas_name)
             attr = netattr.Attr(attrdata, atlasobj, scan, feature)
@@ -221,10 +215,9 @@ class MongoDBDatabase:
 
     def get_static_net(self, scan, atlas_name, feature):
         # return to an net object directly
-        mode = 'static'
-        if self.exist_query(mode, scan, atlas_name, feature):
+        if self.exist_query('static', scan, atlas_name, feature):
             binary_data = self.main_query(
-                mode, scan, atlas_name, feature)['value']
+                'static', scan, atlas_name, feature)['value']
             netdata = pickle.loads(binary_data)
             atlasobj = atlas.get(atlas_name)
             net = netattr.Net(netdata, atlasobj, scan, feature)
