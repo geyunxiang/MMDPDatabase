@@ -51,7 +51,7 @@ class MMDPDatabase:
 		self.sdb = SQLiteDB()
 		self.data_source = data_source
 
-	def get_feature(self, scan_list, atlasobj, feature_name):
+	def get_feature(self, scan_list, atlasobj, feature_name, comment = {}):
 		"""
 		Designed for static networks and attributes query.
 		Using scan name , altasobj/altasobj name, feature name and data source(the default is Changgung) to query data from Redis.
@@ -70,11 +70,11 @@ class MMDPDatabase:
 			raise Exception("Please input in the format as follows : scan must be str or a list of str, atlas and feature must be str")
 		ret_list = []
 		for scan in scan_list:
-			res = self.rdb.get_static_value(self.data_source, scan, atlasobj, feature_name)
+			res = self.rdb.get_static_value(self.data_source, scan, atlasobj, feature_name, comment)
 			if res is not None:
 				ret_list.append(res)
 			else:
-				doc = self.mdb.query_static(scan, atlasobj, feature_name)
+				doc = self.mdb.query_static(scan, atlasobj, feature_name, comment)
 				if doc.count() != 0:
 					ret_list.append(self.rdb.set_value(doc[0],self.data_source))
 				else:
@@ -85,7 +85,7 @@ class MMDPDatabase:
 		else:
 			return ret_list
 
-	def get_dynamic_feature(self, scan_list, atlasobj, feature_name, window_length, step_size):
+	def get_dynamic_feature(self, scan_list, atlasobj, feature_name, window_length, step_size, comment = {}):
 		"""
 		Designed for dynamic networks and attributes query.
 		Using scan name , altasobj/altasobj name, feature name, window length, step size and data source(the default is Changgung)
@@ -103,11 +103,11 @@ class MMDPDatabase:
 			raise Exception("Please input in the format as follows : scan must be str or a list of str, atlas and feature must be str, window length and step size must be int")
 		ret_list = []
 		for scan in scan_list:
-			res = self.rdb.get_dynamic_value(self.data_source, scan, atlasobj, feature_name, window_length, step_size)
+			res = self.rdb.get_dynamic_value(self.data_source, scan, atlasobj, feature_name, window_length, step_size, comment)
 			if res is not None:
 				ret_list.append(res)
 			else:
-				doc = self.mdb.query_dynamic(scan, atlasobj, feature_name, window_length, step_size)
+				doc = self.mdb.query_dynamic(scan, atlasobj, feature_name, window_length, step_size, comment)
 				if doc.count() != 0:
 					mat = self.rdb.set_value(doc,self.data_source)
 					ret_list.append(mat)
@@ -177,8 +177,8 @@ class MMDPDatabase:
 
 class SQLiteDB:
 	"""
-	SQLite stores meta-info like patient information, scan date, group 
-	relationships, research study cases and so on. 
+	SQLite stores meta-info like patient information, scan date, group
+	relationships, research study cases and so on.
 	"""
 	def __init__(self, dbFilePath = rootconfig.dms.mmdpdb_filepath):
 		self.engine = create_engine('sqlite:///' + dbFilePath)

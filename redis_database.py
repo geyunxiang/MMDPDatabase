@@ -74,7 +74,10 @@ class RedisDatabase:
 			to set a new entry in Redis.
 		"""
 		if type(obj) is dict:
-			key = self.generate_static_key(data_source, obj['scan'], obj['atlas'], obj['feature'])
+			if 'comment' in obj[0]:
+				key = self.generate_static_key(data_source, obj['scan'], obj['atlas'], obj['feature'], obj['comment'])
+			else:
+				key = self.generate_static_key(data_source, obj['scan'], obj['atlas'], obj['feature'], {})
 			self.datadb.set(key, obj['value'], ex=1800)
 			return self.trans_netattr(obj['scan'], obj['atlas'], obj['feature'], pickle.loads(obj['value']))
 		elif type(obj) is pymongo.cursor.Cursor:
@@ -84,7 +87,11 @@ class RedisDatabase:
 			feature = obj[0]['feature']
 			window_length = obj[0]['window_length']
 			step_size = obj[0]['step_size']
-			key_all = self.generate_dynamic_key(data_source, scan, atlas, feature, window_length, step_size)
+			if 'comment' in obj[0]:
+				comment = obj[0]['comment']
+			else:
+				comment = {}
+			key_all = self.generate_dynamic_key(data_source, scan, atlas, feature, window_length, step_size, comment)
 			pipe = self.datadb.pipeline()
 			length=obj.count()
 			try:
@@ -122,20 +129,24 @@ class RedisDatabase:
 
 
 
-	def generate_static_key(self, data_source, subject_scan, atlas_name, feature_name):
+	def generate_static_key(self, data_source, subject_scan, atlas_name, feature_name, comment):
 		key = data_source + ':' + subject_scan + ':' + atlas_name + ':' + feature_name + ':0'
+		if comment != None:
+			key += ':' + str(comment)
 		return key
 
-	def generate_dynamic_key(self, data_source, subject_scan, atlas_name, feature_name, window_length, step_size):
+	def generate_dynamic_key(self, data_source, subject_scan, atlas_name, feature_name, window_length, step_size, comment):
 		key = data_source + ':' + subject_scan + ':' + atlas_name + ':' + feature_name +':1:'+ str(window_length) + ':' + str(step_size)
+		if comment != None:
+			key += ':' + str(comment)
 		return key
 
-	def get_static_value(self, data_source, subject_scan, atlas_name, feature_name):
+	def get_static_value(self, data_source, subject_scan, atlas_name, feature_name, comment = {}):
 		"""
 		Using data source, scan name, altasobj name, feature name to query static networks and attributes from Redis.
 		If the query succeeds, return a Net or Attr class, if not, return none.
 		"""
-		key = self.generate_static_key(data_source, subject_scan, atlas_name, feature_name)
+		key = self.generate_static_key(data_source, subject_scan, atlas_name, feature_name, comment)
 		res = self.datadb.get(key)
 		self.datadb.expire(key, 1800)
 		if res is not None:
@@ -151,13 +162,13 @@ class RedisDatabase:
 			net = netattr.Net(value, atlas.get(atlas_name), subject_scan, feature_name)
 			return net
 
-	def get_dynamic_value(self, data_source, subject_scan, atlas_name, feature_name, window_length, step_size):
+	def get_dynamic_value(self, data_source, subject_scan, atlas_name, feature_name, window_length, step_size, comment = {}):
 		"""
 		Using data source, scan name, altasobj name, feature name, window length, step size to query dynamic
 			networks and attributes from Redis.
 		If the query succeeds, return a DynamicNet or DynamicAttr class, if not, return none.
 		"""
-		key_all = self.generate_dynamic_key(data_source, subject_scan, atlas_name, feature_name, window_length, step_size)
+		key_all = self.generate_dynamic_key(data_source, subject_scan, atlas_name, feature_name, window_length, step_size, comment)
 		if self.datadb.exists(key_all + ':0'):
 			pipe = self.datadb.pipeline()
 			try:
