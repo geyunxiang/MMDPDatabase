@@ -31,6 +31,7 @@ dynamic document
 '''
 import pymongo
 import pickle
+
 from mmdps.proc import atlas, netattr
 
 
@@ -71,14 +72,10 @@ class MongoDBDatabase:
         print(stats)
 
     def colStats(self, col=None):
-        """
-        Display collection status
-        Default collection is self.col and default db is self.db
-        """
+        """Display collection status"""
+        """Default collection is self.db['features']"""
         if col == None:
-            col = self.col
-        else:
-            col = self.db[col]
+            col = 'features'
         stats = self.db.command("collstats", col)
         print(stats)
 
