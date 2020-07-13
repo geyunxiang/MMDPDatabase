@@ -68,11 +68,11 @@ class RedisDatabase:
 		except Exception as e:
 			raise Exception('Unble to stop redis，error message:' + str(e))
 
-	"""
-	Using a dictionary, a Mongdb object, a Net class, a Attr class, a DynamicNet class or a DynamicAttr class
-		to set a new entry in Redis.
-	"""
 	def set_value(self, obj, data_source):
+		"""
+		Using a dictionary, a Mongdb object, a Net class, a Attr class, a DynamicNet class or a DynamicAttr class
+			to set a new entry in Redis.
+		"""
 		if type(obj) is dict:
 			key = self.generate_static_key(data_source, obj['scan'], obj['atlas'], obj['feature'])
 			self.datadb.set(key, obj['value'], ex=1800)
@@ -91,7 +91,7 @@ class RedisDatabase:
 				pipe.multi()
 				pipe.set(key_all + ':0', length, ex=1600)
 				for i in range(length):  # 使用查询关键字保证升序
-					pipe.set(key_all + ':' + str(i+1), (obj[i]['value']), ex=1800)
+					pipe.set(key_all + ':' + str(i + 1), (obj[i]['value']), ex=1800)
 					value.append(pickle.loads(obj[i]['value']))
 				pipe.execute()
 			except Exception as e:
@@ -130,11 +130,11 @@ class RedisDatabase:
 		key = data_source + ':' + subject_scan + ':' + atlas_name + ':' + feature_name +':1:'+ str(window_length) + ':' + str(step_size)
 		return key
 
-	"""
-	Using data source, scan name, altasobj name, feature name to query static networks and attributes from Redis.
-	If the query succeeds, return a Net or Attr class, if not, return none.
-	"""
 	def get_static_value(self, data_source, subject_scan, atlas_name, feature_name):
+		"""
+		Using data source, scan name, altasobj name, feature name to query static networks and attributes from Redis.
+		If the query succeeds, return a Net or Attr class, if not, return none.
+		"""
 		key = self.generate_static_key(data_source, subject_scan, atlas_name, feature_name)
 		res = self.datadb.get(key)
 		self.datadb.expire(key, 1800)
@@ -144,19 +144,19 @@ class RedisDatabase:
 			return None
 
 	def trans_netattr(self,subject_scan, atlas_name, feature_name, value):
-		if feature_name not in ['dwi_net', 'bold_net']:  # 这里要改一下
+		if value.ndim == 1:  # 这里要改一下
 			arr = netattr.Attr(value, atlas.get(atlas_name),subject_scan, feature_name)
 			return arr
 		else:
 			net = netattr.Net(value, atlas.get(atlas_name), subject_scan, feature_name)
 			return net
 
-	"""
-	Using data source, scan name, altasobj name, feature name, window length, step size to query dynamic 
-		networks and attributes from Redis.
-	If the query succeeds, return a DynamicNet or DynamicAttr class, if not, return none.
-	"""
 	def get_dynamic_value(self, data_source, subject_scan, atlas_name, feature_name, window_length, step_size):
+		"""
+		Using data source, scan name, altasobj name, feature name, window length, step size to query dynamic
+			networks and attributes from Redis.
+		If the query succeeds, return a DynamicNet or DynamicAttr class, if not, return none.
+		"""
 		key_all = self.generate_dynamic_key(data_source, subject_scan, atlas_name, feature_name, window_length, step_size)
 		if self.datadb.exists(key_all + ':0'):
 			pipe = self.datadb.pipeline()
@@ -183,18 +183,18 @@ class RedisDatabase:
 			return None
 
 	def trans_dynamic_netattr(self, subject_scan, atlas_name, feature_name, window_length, step_size, value):
-		if feature_name not in ['dwi_net', 'bold_net']:  # 这里要改一下
+		if value.ndim == 2:  # 这里要改一下
 			arr = netattr.DynamicAttr(value.swapaxes(0,1), atlas.get(atlas_name), window_length, step_size, subject_scan, feature_name)
 			return arr
 		else:
 			net = netattr.DynamicNet(value.swapaxes(0,2).swapaxes(0,1), atlas.get(atlas_name), window_length, step_size, subject_scan, feature_name)
 			return net
 
-	"""
-	Using data source, scan name, atlas name, feature name to check the existence of an static entry in Redis.
-	You can add isdynamic(True), window length, step size to check the existence of an dynamic entry in Redis.
-	"""
 	def exists_key(self,data_source, subject_scan, atlas_name, feature_name, isdynamic = False, window_length = 0, step_size = 0):
+		"""
+		Using data source, scan name, atlas name, feature name to check the existence of an static entry in Redis.
+		You can add isdynamic(True), window length, step size to check the existence of an dynamic entry in Redis.
+		"""
 		if isdynamic is False:
 			return self.datadb.exists(self.generate_static_key(data_source, subject_scan, atlas_name, feature_name))
 		else:
@@ -205,30 +205,30 @@ class RedisDatabase:
 	Note: the items in list must be int or float.
 	"""
 
-	"""
-	Store a list to Redis as cache with cache_key.
-	Note: please check the existence of the cache_key, or it will cover the origin entry.
-	"""
 	def set_list_all_cache(self,key,value):
+		"""
+		Store a list to Redis as cache with cache_key.
+		Note: please check the existence of the cache_key, or it will cover the origin entry.
+		"""
 		self.cachedb.delete(key)
 		for i in value:
 			self.cachedb.rpush(key, i)
 		#self.cachedb.save()
 		return self.cachedb.llen(key)
 
-	"""
-	Append value to a list as the last one in Redis with cache_key.
-	If the given key is empty in Redis, a new list will be created.
-	"""
 	def set_list_cache(self,key,value):
+		"""
+		Append value to a list as the last one in Redis with cache_key.
+		If the given key is empty in Redis, a new list will be created.
+		"""
 		self.cachedb.rpush(key,value)
 		#self.cachedb.save()
 		return self.cachedb.llen(key)
 
-	"""
-	Return a list with given cache_key in Redis.
-	"""
 	def get_list_cache(self, key, start = 0, end = -1):
+		"""
+		Return a list with given cache_key in Redis.
+		"""
 		res = self.cachedb.lrange(key, start, end)
 		lst=[]
 		for x in res:
@@ -237,25 +237,28 @@ class RedisDatabase:
 			else:
 				lst.append(float(x))
 		return lst
-	"""
-	Check the existence of a list in Redis by cache_key.
-	"""
+
 	def exists_key_cache(self, key):
+		"""
+		Check the existence of a list in Redis by cache_key.
+		"""
 		return self.cachedb.exists(key)
 
-	"""
-	Delete an entry in Redis by cache_key.
-	If the given key is empty in Redis, do nothing.
-	"""
+
 	def delete_key_cache(self, key):
+		"""
+		Delete an entry in Redis by cache_key.
+		If the given key is empty in Redis, do nothing.
+		"""
 		value = self.cachedb.delete(key)
 		#self.cachedb.save()
 		return value
 
-	"""
-	Delete all the entries in Redis.
-	"""
+
 	def clear_cache(self):
+		"""
+		Delete all the entries in Redis.
+		"""
 		self.cachedb.flushdb()
 
 	"""
@@ -263,38 +266,40 @@ class RedisDatabase:
 	Note: the keys in hash must be string.
 	"""
 
-	"""
-	Store a hash to Redis with hash_name and a hash.
-	Note: please check the existence of the hash_name, or it will cover the origin hash.
-	"""
 	def set_hash_all(self,name,hash):
+		"""
+		Store a hash to Redis with hash_name and a hash.
+		Note: please check the existence of the hash_name, or it will cover the origin hash.
+		"""
 		self.hashdb.delete(name)
 		for i in hash:
 			hash[i]=pickle.dumps(hash[i])
 		self.hashdb.hmset(name,hash)
 
-	"""
-	Append an entry/entries to a hash in Redis with hash_name.
-	If the given name is empty in Redis, a new hash will be created.
-	The input format should be as follows:
-		1.A hash
-		2.A key and a value
-	"""
+
 	def set_hash(self,name, item1, item2=''):
+		"""
+		Append an entry/entries to a hash in Redis with hash_name.
+		If the given name is empty in Redis, a new hash will be created.
+		The input format should be as follows:
+			1.A hash
+			2.A key and a value
+		"""
 		if type(item1) is dict:
 			for i in item1:
 				item1[i] = pickle.dumps(item1[i])
 			self.hashdb.hmset(name,item1)
 		else:
 			self.hashdb.hset(name, item1, pickle.dumps(item2))
-	"""
-	Support three query functions:
-		1.Return a hash with a given hash_name in Redis.
-		2.Return a value_list with a given hash_name and a key_list in Redis,
-			the value_list is the same sequence as key_list.
-		3.Return a value with a given hash_name and a key in Redis.
-	"""
+
 	def get_hash(self,name,keys=[]):
+		"""
+		Support three query functions:
+			1.Return a hash with a given hash_name in Redis.
+			2.Return a value_list with a given hash_name and a key_list in Redis,
+				the value_list is the same sequence as key_list.
+			3.Return a value with a given hash_name and a key in Redis.
+		"""
 		if not keys:
 			res = self.hashdb.hgetall(name)
 			hash={}
@@ -310,34 +315,39 @@ class RedisDatabase:
 			else:
 				return pickle.loads(self.hashdb.hget(name, keys))
 
-	"""
-	Check the existence of a hash in Redis by hash_name.
-	"""
+
 	def exists_hash(self,name):
+		"""
+		Check the existence of a hash in Redis by hash_name.
+		"""
 		return self.hashdb.exists(name)
 
-	"""
-	Check the existence of a key in a given hash by key_name and hash_name.
-	"""
+
 	def exists_hash_key(self,name,key):
+		"""
+		Check the existence of a key in a given hash by key_name and hash_name.
+		"""
 		return self.hashdb.hexists(name, key)
 
-	"""
-	Delete a hash in Redis by hash_name.
-	"""
+
 	def delete_hash(self,name):
+		"""
+		Delete a hash in Redis by hash_name.
+		"""
 		self.hashdb.delete(name)
 
-	"""
-	Delete a key in a given hash by key_name and hash_name.
-	"""
+
 	def delete_hash_key(self,name,key):
+		"""
+		Delete a key in a given hash by key_name and hash_name.
+		"""
 		self.hashdb.hdel(name,key)
 
-	"""
-	Delete all the hashes in Redis by hash_name.
-	"""
+
 	def clear_hash(self):
+		"""
+		Delete all the hashes in Redis by hash_name.
+		"""
 		self.hashdb.flushdb()
 
 	def flushall(self):
