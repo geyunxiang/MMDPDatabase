@@ -31,8 +31,10 @@ dynamic document
 '''
 import pymongo
 import pickle
+import sys,os
+sys.path.append("C:\\Users\\THU-EE-WL\\Documents\\VScode Files\\mmdps\\")
 
-from mmdps.proc import atlas, netattr
+from mmdps.proc  import atlas, netattr
 
 
 class MongoDBDatabase:
@@ -141,7 +143,7 @@ class MongoDBDatabase:
             raise MultipleRecordException(feature.scan, 'Please check again.')
         attrdata = pickle.dumps(feature.data)
         document = self.get_document(
-            'static', feature.scan, feature.atlasobj.name, feature.feature.name, attrdata, comment)
+            'static', feature.scan, feature.atlasobj.name, feature.feature_name, attrdata, comment)
         self.db['features'].insert_one(document)
 
     def remove_static_feature(self, scan, atlas_name, feature, comment={}):
