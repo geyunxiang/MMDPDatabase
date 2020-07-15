@@ -50,4 +50,7 @@ def redis_way_1():
 	rdb.clear_cache('test lst 2')
 
 if __name__ == '__main__':
-	redis_way_1()
+	#redis_way_1()
+	a = redis_database.RedisDatabase()
+	a.set_list_all_cache('key',['nihao','shijie'])
+	print(a.get_list_cache('key'))

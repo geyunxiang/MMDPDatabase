@@ -24,6 +24,25 @@ from mmdps import rootconfig
 
 # from . import mongodb_database, redis_database
 import mongodb_database, redis_database
+from Cryptodome.Cipher import AES
+from Cryptodome import Random
+
+class AESCoding:
+	def __init__(self, tkey = b'this is a 16 key'):
+		#you can change the mode here, there are five mode for you to choose,
+		#CBC ECB CTR OCF CFB, CTR is not suggested
+		#If you change into a different mode, you need to rewrite AESCoding,
+		#because for different coding mode, the operation is not the same.
+		if (type(tkey) is not bytes):
+			tkey= tkey.encode()
+		self.key = tkey
+		self.iv = Random.new().read(AES.block_size)
+		self.mycipher = AES.new(self.key, AES.MODE_CFB, self.iv)
+	def encode(self, data):
+		return self.iv + self.mycipher.encrypt(data.encode())
+	def decode(self, data, tkey):
+		mydecrypt = AES.new(tkey, AES.MODE_CFB, data[:16])
+		return mydecrypt.decrypt(data[16:]).decode()
 
 class MMDPDatabase:
 	def __init__(self, data_source = 'Changgung'):
@@ -32,7 +51,7 @@ class MMDPDatabase:
 		self.sdb = SQLiteDB()
 		self.data_source = data_source
 
-	def get_feature(self, scan_list, atlasobj, feature_name):
+	def get_feature(self, scan_list, atlasobj, feature_name, comment = {}):
 		"""
 		Designed for static networks and attributes query.
 		Using scan name , altasobj/altasobj name, feature name and data source(the default is Changgung) to query data from Redis.
@@ -46,13 +65,16 @@ class MMDPDatabase:
 			return_single = True
 		if type(atlasobj) is atlas.Atlas:
 			atlasobj = atlasobj.name
+
+		if (not (type(scan_list) is list or type(scan_list) is str) or type(atlasobj) is not str or type(feature_name) is not str):
+			raise Exception("Please input in the format as follows : scan must be str or a list of str, atlas and feature must be str")
 		ret_list = []
 		for scan in scan_list:
-			res = self.rdb.get_static_value(self.data_source, scan, atlasobj, feature_name)
+			res = self.rdb.get_static_value(self.data_source, scan, atlasobj, feature_name, comment)
 			if res is not None:
 				ret_list.append(res)
 			else:
-				doc = self.mdb.query_static(scan, atlasobj, feature_name)
+				doc = self.mdb.query_static(scan, atlasobj, feature_name, comment)
 				if doc.count() != 0:
 					ret_list.append(self.rdb.set_value(doc[0],self.data_source))
 				else:
@@ -63,7 +85,7 @@ class MMDPDatabase:
 		else:
 			return ret_list
 
-	def get_dynamic_feature(self, scan_list, atlasobj, feature_name, window_length, step_size):
+	def get_dynamic_feature(self, scan_list, atlasobj, feature_name, window_length, step_size, comment = {}):
 		"""
 		Designed for dynamic networks and attributes query.
 		Using scan name , altasobj/altasobj name, feature name, window length, step size and data source(the default is Changgung)
@@ -77,13 +99,15 @@ class MMDPDatabase:
 			return_single = True
 		if type(atlasobj) is atlas.Atlas:
 			atlasobj = atlasobj.name
+		if (not (type(scan_list) is list or type(scan_list) is str) or type(atlasobj) is not str or type(feature_name) is not str or type(window_length) is not int or type(step_size) is not int):
+			raise Exception("Please input in the format as follows : scan must be str or a list of str, atlas and feature must be str, window length and step size must be int")
 		ret_list = []
 		for scan in scan_list:
-			res = self.rdb.get_dynamic_value(self.data_source, scan, atlasobj, feature_name, window_length, step_size)
+			res = self.rdb.get_dynamic_value(self.data_source, scan, atlasobj, feature_name, window_length, step_size, comment)
 			if res is not None:
 				ret_list.append(res)
 			else:
-				doc = self.mdb.query_dynamic(scan, atlasobj, feature_name, window_length, step_size)
+				doc = self.mdb.query_dynamic(scan, atlasobj, feature_name, window_length, step_size, comment)
 				if doc.count() != 0:
 					mat = self.rdb.set_value(doc,self.data_source)
 					ret_list.append(mat)
@@ -106,6 +130,8 @@ class MMDPDatabase:
 		"""
 		Store a list to redis as cache with cache_key
 		"""
+		if (type(cache_key) is not str or not all((type(x) is int or type(x) is float) for x in value)):
+			raise Exception("Please input in the format as follows : key must be str, value must be a list of float or int")
 		self.rdb.set_list_all_cache(cache_key, value)
 
 	def append_cache_list(self, cache_key, value):
@@ -113,6 +139,8 @@ class MMDPDatabase:
 		Append value to a list in redis with cache_key.
 		If the given key is empty in redis, a new list will be created.
 		"""
+		if (type(cache_key) is not str or not (type(value) is int or type(value) is float)):
+			raise Exception("Please input in the format as follows : key mast be str, value must be int or float")
 		self.rdb.set_list_cache(cache_key, value)
 
 	def get_cache_list(self, cache_key):
@@ -126,6 +154,7 @@ class MMDPDatabase:
 		Save list from redis to MongoDB
 		"""
 		a = self.get_cache_list(cache_key)
+		#self.rdb.delete_key_cache(cache_key)
 		self.mdb.put_temp_data(a,cache_key)
 
 
@@ -148,8 +177,8 @@ class MMDPDatabase:
 
 class SQLiteDB:
 	"""
-	SQLite stores meta-info like patient information, scan date, group 
-	relationships, research study cases and so on. 
+	SQLite stores meta-info like patient information, scan date, group
+	relationships, research study cases and so on.
 	"""
 	def __init__(self, dbFilePath = rootconfig.dms.mmdpdb_filepath):
 		self.engine = create_engine('sqlite:///' + dbFilePath)
