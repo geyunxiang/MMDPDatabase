@@ -74,7 +74,7 @@ class RedisDatabase:
 			to set a new entry in Redis.
 		"""
 		if type(obj) is dict:
-			if 'comment' in obj[0]:
+			if 'comment' in obj:
 				key = self.generate_static_key(data_source, obj['scan'], obj['atlas'], obj['feature'], obj['comment'])
 			else:
 				key = self.generate_static_key(data_source, obj['scan'], obj['atlas'], obj['feature'], {})

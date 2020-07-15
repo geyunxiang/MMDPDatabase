@@ -74,7 +74,7 @@ class MMDPDatabase:
 			if res is not None:
 				ret_list.append(res)
 			else:
-				doc = self.mdb.query_static(scan, atlasobj, feature_name, comment)
+				doc = self.mdb.total_query('static',scan, atlasobj, feature_name, comment)
 				if doc.count() != 0:
 					ret_list.append(self.rdb.set_value(doc[0],self.data_source))
 				else:
@@ -107,7 +107,7 @@ class MMDPDatabase:
 			if res is not None:
 				ret_list.append(res)
 			else:
-				doc = self.mdb.query_dynamic(scan, atlasobj, feature_name, window_length, step_size, comment)
+				doc = self.mdb.total_query('dynamic',scan, atlasobj, feature_name, comment, window_length, step_size)
 				if doc.count() != 0:
 					mat = self.rdb.set_value(doc,self.data_source)
 					ret_list.append(mat)

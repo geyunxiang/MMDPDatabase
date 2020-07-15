@@ -122,10 +122,10 @@ class MongoDBDatabase:
     def total_query(self, mode, scan, atlas_name, feature, comment={}, window_length=None, step_size=None):
         query = self.get_query(mode, scan, atlas_name,
                                feature, comment, window_length, step_size)
-        document = self.getCol(mode).find(query)
         if mode == 'dynamic':
-            self.getCol(mode).find(query).sort("slice_num", 1)
-        return document
+            return self.getCol(mode).find(query).sort("slice_num", 1)
+        elif mode == 'static':
+             return self.getCol(mode).find(query)
 
     def exist_query(self, mode, scan, atlas_name, feature, comment={}, window_length=None, step_size=None):
         """ Check a record if exist """
