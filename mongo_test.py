@@ -3,21 +3,21 @@ MongoDB test script goes here.
 """
 
 import os
-import sys
+import time
+import pickle
 import mongodb_database
 import numpy as np
-import time
 
-sys.path.append("C:\\Users\\THU-EE-WL\\Documents\\VScode Files\\mmdps")
-from mmdps.proc import atlas, loader
 from mmdps import rootconfig
+from mmdps.proc import atlas, loader
 
 
-atlas_list = ['brodmann_lr', 'brodmann_lrce', 'aal', 'aicha', 'bnatlas']
-attr_list_full = ['BOLD.BC', 'BOLD.CCFS', 'BOLD.LE',
-                  'BLD.WD', 'BOLD.net', 'DWI.FA', 'DWI.MD', 'DWI.net','DWI.MD','DWI.FA','DWI.net']
-attr_list = ['BOLD.BC', 'BOLD.CCFS',
-             'BOLD.LE', 'BOLD.WD', 'BOLD.net']
+atlas_list = ['brodmann_lr', 'brodmann_lrce',
+              'aal', 'aicha', 'bnatlas', 'aal2']
+attr_list_full = ['BOLD.BC.inter', 'BOLD.CCFS.inter', 'BOLD.LE.inter',
+                  'BLD.WD.inter', 'BOLD.net.inter', 'DWI.FA', 'DWI.MD', 'DWI.net', 'DWI.MD', 'DWI.FA', 'DWI.net']
+attr_list = ['BOLD.BC.inter', 'BOLD.CCFS.inter',
+             'BOLD.LE.inter', 'BOLD.WD.inter', 'BOLD.net']
 dynamic_attr_list = ['inter-region_bc',
                      'inter-region_ccfs', 'inter-region_le', 'inter-region_wd']
 dynamic_conf_list = [[22, 1], [50, 1], [100, 1], [100, 3]]
@@ -62,7 +62,7 @@ def generate_static_database_networks(data_source='Changgung'):
                       (mriscan, atlas_name))
 
 
-def generate_dynamic_database_attrs(dynamic_rootfolder, data_soource='Changgung'):
+def generate_dynamic_database_attrs(dynamic_rootfolder, data_source='Changgung'):
     database = mongodb_database.MongoDBDatabase(data_source)
     mriscans = os.listdir(dynamic_rootfolder)
     atlas_name = 'brodmann_lrce'
@@ -93,6 +93,8 @@ def generate_dynamic_database_networks(dynamic_rootfolder, data_source='Changgun
             except OSError as e:
                 print('! not found! scan: %s  not found!' % (mriscan))
 
+    os.listdir(rootfolder)
+
 
 def main():
     mdb = mongodb_database.MongoDBDatabase(None)
@@ -104,15 +106,72 @@ def main():
     print(res)
 
 
+def get_atlas_list(atlaspath, atlas_list):
+    """ Get the intersection of two list"""
+    atlas_folder = os.listdir(atlaspath)
+    return list(set(atlas_folder).intersection(set(atlas_list)))
 
-data_source = 'Changgung'
-start = time.time()
-generate_static_database_attrs(data_source)
-mdb=mongodb_database.MongoDBDatabase(data_source)
-end = time.time()
-mdb.colStats()
-mdb.dbStats()
-print("time",end-start)
+
+def get_attr_list(attrpath, attr_list):
+    """
+    Attrpath is the csvfile path
+    Get attr list through this mapping function
+    Get the intersection of two list
+    """
+    attr_names = os.listdir(attrpath)
+    attrlist = []
+    for attr_name in attr_names:
+        if attr_name == 'bold_interBC.csv':
+            attrlist.append('BOLD.BC.inter')
+        elif attr_name == 'bold_interCCFS.csv':
+            attrlist.append('BOLD.CCFS.inter')
+        elif attr_name == 'bold_interLE.csv':
+            attrlist.append('BOLD.LE.inter')
+        elif attr_name == 'bpld_interWD.csv':
+            attrlist.append('BOLD.WD.inter')
+        elif attr_name == 'bold_net.csv':
+            attrlist.append('BOLD.net')
+    return list(set(attrlist).intersection(set(attr_list)))
+
+
+def test_load_feature(data_source='Changgung'):
+    """ 
+    Test time usage of mongo and loader 
+    This function will check the folder's completeness
+    """
+    mdb = mongodb_database.MongoDBDatabase(data_source)
+    loader_time = 0
+    mongo_time = 0
+    mriscans = os.listdir(rootconfig.path.feature_root)
+    for mriscan in mriscans:
+        atlas_path = rootconfig.path.feature_root + "\\"+mriscan
+        for atlas_name in get_atlas_list(atlas_path, atlas_list):
+            atlasobj = atlas.get(atlas_name)
+            attr_path = atlas_path + "\\"+atlas_name
+            for attr_name in get_attr_list(attr_path, attr_list):
+                loader_start = time.time()
+                attr = loader.load_attrs([mriscan], atlasobj, attr_name)
+                loader_end = time.time()
+                if mdb.exist_query('static', attr[0].scan, attr[0].atlasobj.name, attr[0].feature_name) != None:
+                    print(attr[0].scan, 'Please check again.')
+                else:
+                    attrdata = pickle.dumps(attr[0].data)
+                    document = mdb.get_document(
+                        'static', attr[0].scan, attr[0].atlasobj.name, attr[0].feature_name, attrdata)
+                    """"
+                    documents=[]
+                    documents.append(document)
+                    mdb.db['features'].insert_many(documents)
+                    """"
+                    mongo_start = time.time()
+                    mdb.db['features'].insert_one(document)
+                    mongo_end = time.time()
+                    loader_time += loader_end - loader_start
+                    mongo_time += mongo_end - mongo_start
+    print(loader_time)
+    print(mongo_time)
+    mdb.dbStats()
+    mdb.colStats()
 
 
 if __name__ == '__main__':

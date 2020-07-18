@@ -31,10 +31,12 @@ dynamic document
 '''
 import pymongo
 import pickle
-import sys,os
-sys.path.append("C:\\Users\\THU-EE-WL\\Documents\\VScode Files\\mmdps\\")
-
-from mmdps.proc  import atlas, netattr
+import sys
+import os
+import time
+import logging
+from pymongo import monitoring
+from mmdps.proc import atlas, netattr
 
 
 class MongoDBDatabase:
@@ -125,8 +127,6 @@ class MongoDBDatabase:
         query = self.get_query(mode, scan, atlas_name,
                                feature, comment, window_length, step_size)
         document = self.getCol(mode).find(query)
-        if mode == 'dynamic':
-            self.getCol(mode).find(query).sort("slice_num", 1)
         return document
 
     def exist_query(self, mode, scan, atlas_name, feature, comment={}, window_length=None, step_size=None):
@@ -135,9 +135,16 @@ class MongoDBDatabase:
                                feature, comment, window_length, step_size)
         return self.getCol(mode).find_one(query)
 
+    def insert_document(self, document, col='features'):
+        """ 
+        Insert a ducument into database collection directly
+        This document must be a JSON doc
+        """
+        self.db[col].insert_one(document)
+
     def save_static_feature(self, feature, comment={}):
         """
-        feature could be netattr.Net or netattr.Attr
+        Feature could be netattr.Net or netattr.Attr
         """
         if self.exist_query('static', feature.scan, feature.atlasobj.name, feature.feature_name, comment) != None:
             raise MultipleRecordException(feature.scan, 'Please check again.')
@@ -258,6 +265,18 @@ class MongoDBDatabase:
         If None is input, delete all temp data
         """
         self.temp_collection.delete_many(description_dict)
+
+    def drop_collection(self, db, col):
+        """ Drop a collection in a database """
+        self.client[db].drop_collection(col)
+
+    def drop_database(self, dbname):
+        """ Drop a database in this mongo client """
+        self.client.drop_database(dbname)
+
+    def server_info(self):
+        """ Get information about mongodb server we connected to """
+        self.client.server_info()
 
 
 class MultipleRecordException(Exception):
