@@ -14,13 +14,23 @@ from mmdps.proc import atlas, loader
 
 atlas_list = ['brodmann_lr', 'brodmann_lrce',
               'aal', 'aicha', 'bnatlas', 'aal2']
+
 attr_list = ['BOLD.BC.inter', 'BOLD.CCFS.inter',
              'BOLD.LE.inter', 'BOLD.WD.inter', 'BOLD.net']
+
+attr_name = ['bold_interBC.csv', 'bold_interCCFS.csv',
+             'bold_interLE.csv', 'bold_interWD.csv', 'bold_net.csv']
+
 dynamic_attr_list = ['inter-region_bc',
                      'inter-region_ccfs', 'inter-region_le', 'inter-region_wd']
+
 attr_list_full = ['BOLD.BC.inter', 'BOLD.CCFS.inter', 'BOLD.LE.inter',
                   'BLD.WD.inter', 'BOLD.net.inter', 'DWI.FA', 'DWI.MD', 'DWI.net', 'DWI.MD', 'DWI.FA', 'DWI.net']
+
 dynamic_conf_list = [[22, 1], [50, 1], [100, 1], [100, 3]]
+
+""" Get attrname from csvfile name """
+MappingDict = dict(zip(attr_name, attr_list))
 
 
 def generate_static_database_attrs(data_source='Changgung'):
@@ -28,7 +38,7 @@ def generate_static_database_attrs(data_source='Changgung'):
     Generate MongoDB from scratch.
     Scan a directory and move the directory to MongoDB
     """
-    database = mongodb_database.MongoDBDatabase(data_source)
+    mongodb_database = mongodb_database.MongoDBDatabase(data_source)
     mriscans = os.listdir(rootconfig.path.feature_root)
     for mriscan in mriscans:
         for atlas_name in atlas_list:
@@ -38,7 +48,7 @@ def generate_static_database_attrs(data_source='Changgung'):
                     continue
                 try:
                     attr = loader.load_attrs([mriscan], atlasobj, attr_name)
-                    database.save_static_feature(attr[0])
+                    mdb.save_static_feature(attr[0])
                 except OSError as e:
                     print('! not found! scan: %s, atlas: %s, attr: %s not found!' % (
                         mriscan, atlas_name, attr_name))
@@ -49,14 +59,14 @@ def generate_static_database_networks(data_source='Changgung'):
     Generate MongoDB from scratch.
     Scan a directory and move the directory to MongoDB
     """
-    database = mongodb_database.MongoDBDatabase(data_source)
+    mdb = mongodb_database.MongoDBDatabase(data_source)
     mriscans = os.listdir(rootconfig.path.feature_root)
     for mriscan in mriscans:
         for atlas_name in atlas_list:
             atlasobj = atlas.get(atlas_name)
             try:
                 net = loader.load_single_network(mriscan, atlasobj)
-                database.save_static_feature(net)
+                mdb.save_static_feature(net)
             except OSError as e:
                 print('! not found! scan: %s, atlas: %s, network not found!' %
                       (mriscan, atlas_name))
@@ -112,26 +122,16 @@ def get_atlas_list(atlaspath, atlas_list):
     return list(set(atlas_folder).intersection(set(atlas_list)))
 
 
-def get_attr_list(attrpath, attr_list):
+def get_attr_list(attrpath):
     """
     Attrpath is the csvfile path
-    Get attr list through this mapping function
-    Get the intersection of two list
+    Get attr list through MappingDict
     """
     attr_names = os.listdir(attrpath)
     attrlist = []
     for attr_name in attr_names:
-        if attr_name == 'bold_interBC.csv':
-            attrlist.append('BOLD.BC.inter')
-        elif attr_name == 'bold_interCCFS.csv':
-            attrlist.append('BOLD.CCFS.inter')
-        elif attr_name == 'bold_interLE.csv':
-            attrlist.append('BOLD.LE.inter')
-        elif attr_name == 'bpld_interWD.csv':
-            attrlist.append('BOLD.WD.inter')
-        elif attr_name == 'bold_net.csv':
-            attrlist.append('BOLD.net')
-    return list(set(attrlist).intersection(set(attr_list)))
+        attrlist.append(Mapping[attr_name])
+    return attrlist
 
 
 def test_load_feature(data_source='Changgung'):
@@ -176,7 +176,7 @@ def test_load_feature(data_source='Changgung'):
 
 def check_all_feature(rootfolder, data_source='Changgung'):
     """
-    Check all feature in rootfolder exist in mongo
+    Check all feature in rootfolder whether exist in mongo
     Get total query time and query speed
     """
     mdb = mongodb_database.MongoDBDatabase(data_source)
