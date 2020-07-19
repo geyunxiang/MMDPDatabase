@@ -14,12 +14,12 @@ from mmdps.proc import atlas, loader
 
 atlas_list = ['brodmann_lr', 'brodmann_lrce',
               'aal', 'aicha', 'bnatlas', 'aal2']
-attr_list_full = ['BOLD.BC.inter', 'BOLD.CCFS.inter', 'BOLD.LE.inter',
-                  'BLD.WD.inter', 'BOLD.net.inter', 'DWI.FA', 'DWI.MD', 'DWI.net', 'DWI.MD', 'DWI.FA', 'DWI.net']
 attr_list = ['BOLD.BC.inter', 'BOLD.CCFS.inter',
              'BOLD.LE.inter', 'BOLD.WD.inter', 'BOLD.net']
 dynamic_attr_list = ['inter-region_bc',
                      'inter-region_ccfs', 'inter-region_le', 'inter-region_wd']
+attr_list_full = ['BOLD.BC.inter', 'BOLD.CCFS.inter', 'BOLD.LE.inter',
+                  'BLD.WD.inter', 'BOLD.net.inter', 'DWI.FA', 'DWI.MD', 'DWI.net', 'DWI.MD', 'DWI.FA', 'DWI.net']
 dynamic_conf_list = [[22, 1], [50, 1], [100, 1], [100, 3]]
 
 
@@ -144,10 +144,10 @@ def test_load_feature(data_source='Changgung'):
     mongo_time = 0
     mriscans = os.listdir(rootconfig.path.feature_root)
     for mriscan in mriscans:
-        atlas_path = rootconfig.path.feature_root + "\\"+mriscan
+        atlas_path = os.path.join(rootconfig.path.feature_root, mriscan)
         for atlas_name in get_atlas_list(atlas_path, atlas_list):
             atlasobj = atlas.get(atlas_name)
-            attr_path = atlas_path + "\\"+atlas_name
+            attr_path = os.path.join(atlas_path, atlas_name)
             for attr_name in get_attr_list(attr_path, attr_list):
                 loader_start = time.time()
                 attr = loader.load_attrs([mriscan], atlasobj, attr_name)
@@ -172,6 +172,32 @@ def test_load_feature(data_source='Changgung'):
     print(mongo_time)
     mdb.dbStats()
     mdb.colStats()
+
+
+def check_all_feature(rootfolder, data_source='Changgung'):
+    """
+    Check all feature in rootfolder exist in mongo
+    Get total query time and query speed
+    """
+    mdb = mongodb_database.MongoDBDatabase(data_source)
+    mriscans = os.listdir(rootfolder)
+    query_num = 0
+    query_time = 0
+    for mriscan in mriscans:
+        for atlasname in atlas_list:
+            for attrname in attr_list:
+                query = dict(scan=mriscan, atlas=atlasname, attr=attrname)
+                query_start = time.time()
+                count = mdb.db['features'].find(query).count
+                query_end = time.time()
+                if count == 0:
+                    print(mriscan, atlasname, attrname, "No record")
+                elif count > 1:
+                    print(mriscan, atalsname, attrname, "Repeated record")
+                query_num += 1
+                query_time += query_end-query_start
+    print('Query Number', query_num)
+    print('Query Time', query_time)
 
 
 if __name__ == '__main__':
