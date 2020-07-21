@@ -223,6 +223,10 @@ class MongoDBDatabase:
         doc.update(datadict)
         self.db['EEG'].insert_one(doc)
 
+    def remove_mat_dict(self, scan, feature):
+        query = dict(scan=scan, feature=feature)
+        self.db['EEG'].delete_many(query)
+
     def get_static_attr(self, scan, atlas_name, feature):
         # Return to an attr object  directly
         if self.exist_query('static', scan, atlas_name, feature):
