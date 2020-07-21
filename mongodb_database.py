@@ -35,6 +35,7 @@ import sys
 import os
 import time
 import logging
+import scipy.io as scio
 from pymongo import monitoring
 from mmdps.proc import atlas, netattr
 
@@ -114,6 +115,15 @@ class MongoDBDatabase:
             document = dict(data_source=self.data_source, scan=scan, atlas=atlas_name, feature=feature, dynamic=1,
                             window_length=window_length, step_size=step_size, slice_num=slice_num, value=value, comment=comment)
         return document
+
+    def loadmat(self, path):
+        dic = scio.loadmat(path)
+        dic.pop('__header__')
+        dic.pop('__version__')
+        dic.pop('__globals__')
+        for k in dic.keys():
+            dic[k] = pickle.dumps(dic[k])
+        return dic
 
     def quick_query(self, mode, scan):
         """Query only with scan """
@@ -203,6 +213,15 @@ class MongoDBDatabase:
         query = self.total_query(
             'dynamic', scan, atlas_name, feature, comment, window_length, step_size)
         self.db['dynamic_data'].delete_many(query)
+
+    def save_mat_dict(self, scan, feature, datadict):
+        temp_dict = dict(scan=scan, feature=feature)
+        if self.db['EEG'].find_one(temp_dict) != None:
+            raise MultipleRecordException(temp_dict, 'Please check again.')
+        doc = {}
+        doc = temp_dict.copy()
+        doc.update(datadict)
+        self.db['EEG'].insert_one(doc)
 
     def get_static_attr(self, scan, atlas_name, feature):
         # Return to an attr object  directly

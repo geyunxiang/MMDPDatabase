@@ -106,6 +106,19 @@ def generate_dynamic_database_networks(dynamic_rootfolder, data_source='Changgun
     os.listdir(rootfolder)
 
 
+def generate_EEG_database(rootfolder, data_source='Changung'):
+
+    mdb = mongodb_database.MongoDBDatabase(data_source)
+    mriscans = os.listdir(rootfolder)
+    for mriscan in mriscans:
+        path = os.path.join(rootfolder, mriscan)
+        mats = os.listdir(path)
+        for mat in mats:
+            matpath = os.path.join(path, mat)
+            datadict = mdb.loadmat(matpath)
+            mdb.save_mat_dict(mriscan, mat, datadict)
+
+
 def main():
     mdb = mongodb_database.MongoDBDatabase(None)
     mat = np.array([[1, 2, 3], [4, 5, 6]])
@@ -162,7 +175,7 @@ def test_load_feature(data_source='Changgung'):
                     documents=[]
                     documents.append(document)
                     mdb.db['features'].insert_many(documents)
-                    """"
+                    """
                     mongo_start = time.time()
                     mdb.db['features'].insert_one(document)
                     mongo_end = time.time()
@@ -199,6 +212,17 @@ def check_all_feature(rootfolder, data_source='Changgung'):
     print('Query Number', query_num)
     print('Query Time', query_time)
 
+
+"""
+mdb = mongodb_database.MongoDBDatabase('Changgung')
+mriscan = 'EEG_feature_examples'
+path = 'C:\\Users\\THU-EE-WL\\Desktop\\EEG_feature_examples'
+mats = os.listdir(path)
+for mat in mats:
+    matpath = os.path.join(path, mat)
+    datadict = mdb.loadmat(matpath)
+    mdb.save_mat_dict(mriscan, mat, datadict)
+"""
 
 if __name__ == '__main__':
     pass
