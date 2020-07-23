@@ -34,10 +34,14 @@ import pickle
 import sys
 import os
 import time
+import json
 import logging
 import scipy.io as scio
 from pymongo import monitoring
 from mmdps.proc import atlas, netattr
+
+with open("EEG_conf.json", 'r') as f:
+    EEG_conf = json.load(f.read())
 
 
 class MongoDBDatabase:
@@ -117,12 +121,11 @@ class MongoDBDatabase:
         return document
 
     def loadmat(self, path):
+        """ load mat, return data dict"""
         dic = scio.loadmat(path)
         dic.pop('__header__')
         dic.pop('__version__')
         dic.pop('__globals__')
-        for k in dic.keys():
-            dic[k] = pickle.dumps(dic[k])
         return dic
 
     def quick_query(self, mode, scan):
@@ -214,14 +217,21 @@ class MongoDBDatabase:
             'dynamic', scan, atlas_name, feature, comment, window_length, step_size)
         self.db['dynamic_data'].delete_many(query)
 
-    def save_mat_dict(self, scan, feature, datadict):
-        temp_dict = dict(scan=scan, feature=feature)
-        if self.db['EEG'].find_one(temp_dict) != None:
-            raise MultipleRecordException(temp_dict, 'Please check again.')
-        doc = {}
-        doc = temp_dict.copy()
-        doc.update(datadict)
-        self.db['EEG'].insert_one(doc)
+    def save_mat_dict(self, scan, mat, datadict):
+        """ mat : name of mat file"""
+        feature = EEG_conf[mat]['feature']
+        dic = dict(scan=scan, feature=feature)
+        if self.db['EEG'].find_one(dic) != None:
+            raise MultipleRecordException(dic, 'Please check again.')
+        if EEG_conf[mat]['fields'] == []:
+            for k in datadict.keys():
+                dic[feature] = pickle.dumps(datadict[k])
+        else:
+            for k in datadict.keys():
+                DataArray = datadict[k]
+                for field in EEG_conf[mat]['fields']:
+                    dic[field] = pickle.dumps(DataArray[field])
+        self.db['EEG'].insert_one(dic)
 
     def remove_mat_dict(self, scan, feature):
         query = dict(scan=scan, feature=feature)
