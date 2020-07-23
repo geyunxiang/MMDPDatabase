@@ -5,8 +5,10 @@ MongoDB test script goes here.
 import os
 import time
 import pickle
+import json
 import mongodb_database
 import numpy as np
+
 
 from mmdps import rootconfig
 from mmdps.proc import atlas, loader
@@ -31,6 +33,9 @@ dynamic_conf_list = [[22, 1], [50, 1], [100, 1], [100, 3]]
 
 """ Get attrname from csvfile name """
 MappingDict = dict(zip(attr_name, attr_list))
+
+with open("EEG_conf.json", 'r') as f:
+    EEG_conf = json.loads(f.read())
 
 
 def generate_static_database_attrs(data_source='Changgung'):
@@ -107,7 +112,6 @@ def generate_dynamic_database_networks(dynamic_rootfolder, data_source='Changgun
 
 
 def generate_EEG_database(rootfolder, data_source='Changung'):
-
     mdb = mongodb_database.MongoDBDatabase(data_source)
     mriscans = os.listdir(rootfolder)
     for mriscan in mriscans:
@@ -143,7 +147,7 @@ def get_attr_list(attrpath):
     attr_names = os.listdir(attrpath)
     attrlist = []
     for attr_name in attr_names:
-        attrlist.append(Mapping[attr_name])
+        attrlist.append(MappingDict[attr_name])
     return attrlist
 
 
@@ -218,11 +222,22 @@ mdb = mongodb_database.MongoDBDatabase('Changgung')
 mriscan = 'EEG_feature_examples'
 path = 'C:\\Users\\THU-EE-WL\\Desktop\\EEG_feature_examples'
 mats = os.listdir(path)
+
 for mat in mats:
     matpath = os.path.join(path, mat)
     datadict = mdb.loadmat(matpath)
-    mdb.save_mat_dict(mriscan, mat, datadict)
+    feature = EEG_conf[mat]['feature']
+    dic = dict(scan=mriscan, feature=feature)
+    if EEG_conf[mat]['fields'] == []:
+        for k in datadict.keys():
+            dic[feature] = pickle.dumps(datadict[k])
+    else:
+        for k in datadict.keys():
+            DataArray = datadict[k]
+            for field in EEG_conf[mat]['fields']:
+                print(field)
+                dic[field] = pickle.dumps(DataArray[field])
+    mdb.db['EEG'].insert_one(dic)
 """
-
 if __name__ == '__main__':
     pass
