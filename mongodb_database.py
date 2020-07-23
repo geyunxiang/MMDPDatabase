@@ -31,7 +31,12 @@ dynamic document
 '''
 import pymongo
 import pickle
-
+import sys
+import os
+import time
+import logging
+import scipy.io as scio
+from pymongo import monitoring
 from mmdps.proc import atlas, netattr
 
 
@@ -111,6 +116,15 @@ class MongoDBDatabase:
                             window_length=window_length, step_size=step_size, slice_num=slice_num, value=value, comment=comment)
         return document
 
+    def loadmat(self, path):
+        dic = scio.loadmat(path)
+        dic.pop('__header__')
+        dic.pop('__version__')
+        dic.pop('__globals__')
+        for k in dic.keys():
+            dic[k] = pickle.dumps(dic[k])
+        return dic
+
     def quick_query(self, mode, scan):
         """Query only with scan """
         return self.getCol(mode).find(dict(scan=scan))
@@ -122,6 +136,7 @@ class MongoDBDatabase:
     def total_query(self, mode, scan, atlas_name, feature, comment={}, window_length=None, step_size=None):
         query = self.get_query(mode, scan, atlas_name,
                                feature, comment, window_length, step_size)
+
         if mode == 'dynamic':
             return self.getCol(mode).find(query).sort("slice_num", 1)
         elif mode == 'static':
@@ -133,15 +148,22 @@ class MongoDBDatabase:
                                feature, comment, window_length, step_size)
         return self.getCol(mode).find_one(query)
 
+    def insert_document(self, document, col='features'):
+        """ 
+        Insert a ducument into database collection directly
+        This document must be a JSON doc
+        """
+        self.db[col].insert_one(document)
+
     def save_static_feature(self, feature, comment={}):
         """
-        feature could be netattr.Net or netattr.Attr
+        Feature could be netattr.Net or netattr.Attr
         """
         if self.exist_query('static', feature.scan, feature.atlasobj.name, feature.feature_name, comment) != None:
             raise MultipleRecordException(feature.scan, 'Please check again.')
         attrdata = pickle.dumps(feature.data)
         document = self.get_document(
-            'static', feature.scan, feature.atlasobj.name, feature.feature.name, attrdata, comment)
+            'static', feature.scan, feature.atlasobj.name, feature.feature_name, attrdata, comment)
         self.db['features'].insert_one(document)
 
     def remove_static_feature(self, scan, atlas_name, feature, comment={}):
@@ -194,6 +216,19 @@ class MongoDBDatabase:
         query = self.total_query(
             'dynamic', scan, atlas_name, feature, comment, window_length, step_size)
         self.db['dynamic_data'].delete_many(query)
+
+    def save_mat_dict(self, scan, feature, datadict):
+        temp_dict = dict(scan=scan, feature=feature)
+        if self.db['EEG'].find_one(temp_dict) != None:
+            raise MultipleRecordException(temp_dict, 'Please check again.')
+        doc = {}
+        doc = temp_dict.copy()
+        doc.update(datadict)
+        self.db['EEG'].insert_one(doc)
+
+    def remove_mat_dict(self, scan, feature):
+        query = dict(scan=scan, feature=feature)
+        self.db['EEG'].delete_many(query)
 
     def get_static_attr(self, scan, atlas_name, feature):
         # Return to an attr object  directly
@@ -256,6 +291,18 @@ class MongoDBDatabase:
         If None is input, delete all temp data
         """
         self.temp_collection.delete_many(description_dict)
+
+    def drop_collection(self, db, col):
+        """ Drop a collection in a database """
+        self.client[db].drop_collection(col)
+
+    def drop_database(self, dbname):
+        """ Drop a database in this mongo client """
+        self.client.drop_database(dbname)
+
+    def server_info(self):
+        """ Get information about mongodb server we connected to """
+        self.client.server_info()
 
 
 class MultipleRecordException(Exception):
