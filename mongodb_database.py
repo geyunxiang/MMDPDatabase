@@ -31,17 +31,14 @@ dynamic document
 '''
 import pymongo
 import pickle
-import sys
 import os
+import sys
 import time
 import json
 import logging
 import scipy.io as scio
 from pymongo import monitoring
 from mmdps.proc import atlas, netattr
-
-with open("EEG_conf.json", 'r') as f:
-    EEG_conf = json.load(f.read())
 
 
 class MongoDBDatabase:
@@ -69,6 +66,9 @@ class MongoDBDatabase:
                 uri = uri+"/" + dbname
             self.client = pymongo.MongoClient(uri)
         print(self.client)
+
+        with open("EEG_conf.json", 'r') as f:
+            self.EEG_conf = json.load(f.read())
         self.data_source = data_source
         self.db = self.client[data_source]
         self.col = self.db['features']
@@ -219,17 +219,17 @@ class MongoDBDatabase:
 
     def save_mat_dict(self, scan, mat, datadict):
         """ mat : name of mat file"""
-        feature = EEG_conf[mat]['feature']
+        feature = self.EEG_conf[mat]['feature']
         dic = dict(scan=scan, feature=feature)
         if self.db['EEG'].find_one(dic) != None:
             raise MultipleRecordException(dic, 'Please check again.')
-        if EEG_conf[mat]['fields'] == []:
+        if self.EEG_conf[mat]['fields'] == []:
             for k in datadict.keys():
                 dic[feature] = pickle.dumps(datadict[k])
         else:
             for k in datadict.keys():
                 DataArray = datadict[k]
-                for field in EEG_conf[mat]['fields']:
+                for field in self.EEG_conf[mat]['fields']:
                     dic[field] = pickle.dumps(DataArray[field])
         self.db['EEG'].insert_one(dic)
 
