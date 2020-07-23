@@ -105,10 +105,10 @@ class RedisDatabase:
 				raise Exception('An error occur when tring to set value in redis, error message: ' + str(e))
 			return self.trans_dynamic_netattr(scan, atlas, feature, window_length, step_size, np.array(value))
 		elif type(obj) is netattr.Net or type(obj) is netattr.Attr:
-			key = self.generate_static_key(data_source, obj.scan, obj.atlasobj.name, obj.feature_name)
+			key = self.generate_static_key(data_source, obj.scan, obj.atlasobj.name, obj.feature_name, {})
 			self.atadb.set(key, pickle.dumps(obj.data))
 		elif type(obj) is netattr.DynamicNet or type(obj) is netattr.DynamicAttr:
-			key_all = self.generate_dynamic_key(data_source, obj.scan, obj.atlasobj.name, obj.feature_name, obj.window_length, obj.step_size)
+			key_all = self.generate_dynamic_key(data_source, obj.scan, obj.atlasobj.name, obj.feature_name, obj.window_length, obj.step_size, {})
 			length=obj.data.shape[2]
 			pipe = self.datadb.pipeline()
 			if type(obj) is netattr.DynamicNet:
@@ -201,15 +201,15 @@ class RedisDatabase:
 			net = netattr.DynamicNet(value.swapaxes(0,2).swapaxes(0,1), atlas.get(atlas_name), window_length, step_size, subject_scan, feature_name)
 			return net
 
-	def exists_key(self,data_source, subject_scan, atlas_name, feature_name, isdynamic = False, window_length = 0, step_size = 0):
+	def exists_key(self,data_source, subject_scan, atlas_name, feature_name, isdynamic = False, window_length = 0, step_size = 0, comment ={}):
 		"""
 		Using data source, scan name, atlas name, feature name to check the existence of an static entry in Redis.
 		You can add isdynamic(True), window length, step size to check the existence of an dynamic entry in Redis.
 		"""
 		if isdynamic is False:
-			return self.datadb.exists(self.generate_static_key(data_source, subject_scan, atlas_name, feature_name))
+			return self.datadb.exists(self.generate_static_key(data_source, subject_scan, atlas_name, feature_name,comment))
 		else:
-			return self.datadb.exists(self.generate_dynamic_key(data_source, subject_scan, atlas_name, feature_name, window_length, step_size) + ':0')
+			return self.datadb.exists(self.generate_dynamic_key(data_source, subject_scan, atlas_name, feature_name, window_length, step_size, comment) + ':0')
 
 	"""
 	Redis supports storing and querying list as cache.
