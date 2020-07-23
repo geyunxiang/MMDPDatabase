@@ -68,7 +68,7 @@ class MongoDBDatabase:
         print(self.client)
 
         with open("EEG_conf.json", 'r') as f:
-            self.EEG_conf = json.load(f.read())
+            self.EEG_conf = json.loads(f.read())
         self.data_source = data_source
         self.db = self.client[data_source]
         self.col = self.db['features']
@@ -158,13 +158,17 @@ class MongoDBDatabase:
     def save_static_feature(self, feature, comment={}):
         """
         Feature could be netattr.Net or netattr.Attr
+        Return usage of time for test
         """
         if self.exist_query('static', feature.scan, feature.atlasobj.name, feature.feature_name, comment) != None:
             raise MultipleRecordException(feature.scan, 'Please check again.')
         attrdata = pickle.dumps(feature.data)
         document = self.get_document(
             'static', feature.scan, feature.atlasobj.name, feature.feature_name, attrdata, comment)
+        start = time.time()
         self.db['features'].insert_one(document)
+        end = time.time()
+        return end-start
 
     def remove_static_feature(self, scan, atlas_name, feature, comment={}):
         query = self.total_query('static', scan, atlas_name, feature, comment)

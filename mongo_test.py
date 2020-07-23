@@ -165,7 +165,15 @@ def test_load_feature(data_source='Changgung'):
                     attr = loader.load_attrs([mriscan], atlasobj, attr_name)
                     loader_end = time.time()
                     LoaderTime += loader_end-loader_start
-                    mongo_time = mdb.save_static_feature(attr[0])
+                    if mdb.exist_query('static', attr[0].scan, attr[0].atlasobj.name, attr[0].feature_name) != None:
+                        raise MDB.MultipleRecordException(
+                            attr[0].scan, 'Please check again.')
+                    doc = mdb.get_document(
+                        'static', attr[0].scan, attr[0].atlasobj.name, attr[0].feature_name, pickle.dumps(attr[0].data))
+                    mongo_start = time.time()
+                    mdb.db['features'].insert_one(doc)
+                    mongo_end = mongo_end()
+                    MongoTime += mongo_end-mongo_start
                 except OSError:
                     print('! not found! scan: %s, atlas: %s, attr: %s not found!' % (
                         mriscan, atlas_name, attr_name))
@@ -173,7 +181,6 @@ def test_load_feature(data_source='Changgung'):
                     print(
                         '! Multiple record found ! scan: %s, atlas: %s, attr: %s' % (
                             mriscan, atlas_name, attr_name))
-                MongoTime += mongo_time
     print(LoaderTime)
     print(MongoTime)
 
