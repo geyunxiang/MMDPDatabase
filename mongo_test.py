@@ -150,8 +150,7 @@ def test_load_feature(data_source='Changgung'):
     Test time usage of mongo and loader
     This function will check the folder's completeness
     """
-    MongoTime = 0
-    LoaderTime = 0
+    MongoTime = LoaderTime = 0
     mdb = MDB.MongoDBDatabase(data_source)
     mriscans = os.listdir(rootconfig.path.feature_root)
     for mriscan in mriscans:
@@ -172,7 +171,7 @@ def test_load_feature(data_source='Changgung'):
                         'static', attr[0].scan, attr[0].atlasobj.name, attr[0].feature_name, pickle.dumps(attr[0].data))
                     mongo_start = time.time()
                     mdb.db['features'].insert_one(doc)
-                    mongo_end = mongo_end()
+                    mongo_end = time.time()
                     MongoTime += mongo_end-mongo_start
                 except OSError:
                     print('! not found! scan: %s, atlas: %s, attr: %s not found!' % (
@@ -192,47 +191,32 @@ def check_all_feature(rootfolder, data_source='Changgung'):
     """
     mdb = MDB.MongoDBDatabase(data_source)
     mriscans = os.listdir(rootfolder)
-    query_num = 0
+    query_total_num = query_find_num = 0
     query_time = 0
     for mriscan in mriscans:
         for atlasname in atlas_list:
             for attrname in attr_list:
-                query = dict(scan=mriscan, atlas=atlasname, attr=attrname)
+                query = dict(scan=mriscan, atlas=atlasname, feature=attrname)
                 query_start = time.time()
-                count = mdb.db['features'].find(query).count
+                count = mdb.db['features'].count_documents(query)
                 query_end = time.time()
                 if count == 0:
                     print(mriscan, atlasname, attrname, "No record")
                 elif count > 1:
-                    print(mriscan, atalsname, attrname, "Repeated record")
-                query_num += 1
+                    print(mriscan, atlasname, attrname, "Repeated record")
+                else:
+                    print(mriscan, atlasname, attrname, "Normal record")
+                    query_find_num += 1
+                query_total_num += 1
                 query_time += query_end-query_start
-    print('Query Number', query_num)
+    print('Query Total Number', query_total_num)
+    print("Query Find  Number", query_find_num)
     print('Query Time', query_time)
 
 
-"""
-mdb = mongodb_database.MongoDBDatabase('Changgung')
-mriscan = 'EEG_feature_examples'
-path = 'C:\\Users\\THU-EE-WL\\Desktop\\EEG_feature_examples'
-mats = os.listdir(path)
-for mat in mats:
-    matpath = os.path.join(path, mat)
-    datadict = mdb.loadmat(matpath)
-    feature = EEG_conf[mat]['feature']
-    dic = dict(scan=mriscan, feature=feature)
-    if EEG_conf[mat]['fields'] == []:
-        for k in datadict.keys():
-            dic[feature] = pickle.dumps(datadict[k])
-    else:
-        for k in datadict.keys():
-            DataArray = datadict[k]
-            for field in EEG_conf[mat]['fields']:
-                print(field)
-                dic[field] = pickle.dumps(DataArray[field])
-    mdb.db['EEG'].insert_one(dic)
-"""
-
-
 if __name__ == '__main__':
+    """
+    rootfolder = "C:\\Users\\THU-EE-WL\\Downloads\\Compress\\test2"
+    check_all_feature(rootfolder)
+    """
     pass
