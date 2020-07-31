@@ -31,9 +31,10 @@ dynamic document
 '''
 import pymongo
 import pickle
-import sys
 import os
+import sys
 import time
+import json
 import logging
 import scipy.io as scio
 from pymongo import monitoring
@@ -65,6 +66,9 @@ class MongoDBDatabase:
                 uri = uri+"/" + dbname
             self.client = pymongo.MongoClient(uri)
         print(self.client)
+
+        with open("EEG_conf.json", 'r') as f:
+            self.EEG_conf = json.loads(f.read())
         self.data_source = data_source
         self.db = self.client[data_source]
         self.col = self.db['features']
@@ -117,12 +121,11 @@ class MongoDBDatabase:
         return document
 
     def loadmat(self, path):
+        """ load mat, return data dict"""
         dic = scio.loadmat(path)
         dic.pop('__header__')
         dic.pop('__version__')
         dic.pop('__globals__')
-        for k in dic.keys():
-            dic[k] = pickle.dumps(dic[k])
         return dic
 
     def quick_query(self, mode, scan):
@@ -165,6 +168,8 @@ class MongoDBDatabase:
         document = self.get_document(
             'static', feature.scan, feature.atlasobj.name, feature.feature_name, attrdata, comment)
         self.db['features'].insert_one(document)
+
+
 
     def remove_static_feature(self, scan, atlas_name, feature, comment={}):
         query = self.total_query('static', scan, atlas_name, feature, comment)
@@ -217,14 +222,21 @@ class MongoDBDatabase:
             'dynamic', scan, atlas_name, feature, comment, window_length, step_size)
         self.db['dynamic_data'].delete_many(query)
 
-    def save_mat_dict(self, scan, feature, datadict):
-        temp_dict = dict(scan=scan, feature=feature)
-        if self.db['EEG'].find_one(temp_dict) != None:
-            raise MultipleRecordException(temp_dict, 'Please check again.')
-        doc = {}
-        doc = temp_dict.copy()
-        doc.update(datadict)
-        self.db['EEG'].insert_one(doc)
+    def save_mat_dict(self, scan, mat, datadict):
+        """ mat : name of mat file"""
+        feature = self.EEG_conf[mat]['feature']
+        dic = dict(scan=scan, feature=feature)
+        if self.db['EEG'].find_one(dic) != None:
+            raise MultipleRecordException(dic, 'Please check again.')
+        if self.EEG_conf[mat]['fields'] == []:
+            for k in datadict.keys():
+                dic[feature] = pickle.dumps(datadict[k])
+        else:
+            for k in datadict.keys():
+                DataArray = datadict[k]
+                for field in self.EEG_conf[mat]['fields']:
+                    dic[field] = pickle.dumps(DataArray[field])
+        self.db['EEG'].insert_one(dic)
 
     def remove_mat_dict(self, scan, feature):
         query = dict(scan=scan, feature=feature)
