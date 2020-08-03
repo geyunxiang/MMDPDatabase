@@ -241,13 +241,14 @@ class MongoDBDatabase:
     def get_attr(self, scan, atlas_name, feature):
         """  Return to an attr object  directly """
         query = dict(scan=scan, atlas=atlas_name, feature=feature)
-        count = self.db['features'].count_documents(query)
+        collection = self.db['features']
+        count = collection.count_documents(query)
         if count == 0:
             raise NoRecordFoundException
         elif count > 1:
             raise MultipleRecordException
         else:
-            AttrData = pickle.loads(self.db['features'].find(query)['value'])
+            AttrData = pickle.loads(collection.find(query)['value'])
             atlasobj = atlas.get(atlas_name)
             attr = netattr.Attr(AttrData, atlasobj, scan, feature)
             return attr
@@ -256,12 +257,13 @@ class MongoDBDatabase:
         """ Return to dynamic attr object directly """
         query = dict(scan=scan, atlas=atlas_name, feature=feature,
                      window_length=window_length, step_size=step_size)
-        records = self.db['dynamic_attr'].find(
-            query).sort([('slice_num', pymongo.ASCENDING)])
-        count = records.count
+        collection = self.db['dynamic_attr']
+        count = collection.count_documents(query)
         if count == 0:
             raise NoRecordFoundException
         else:
+            records = collection.find(
+                query).sort([('slice_num', pymongo.ASCENDING)])
             atlasobj = atlas.get(atlas_name)
             AttrData = pickle.loads(records[0]['value'])
             attr = netattr.DynamicAttr(
@@ -288,12 +290,12 @@ class MongoDBDatabase:
         """ Return to dynamic attr object directly """
         query = dict(scan=scan, atlas=atlas_name, feature=feature,
                      window_length=window_length, step_size=step_size)
-        records = self.db['dynamic_net'].find(
-            query).sort([('slice_num', pymongo.ASCENDING)])
-        count = records.count
+        collection = self.db['dynamic_net']
+        count = collection.count_documents(query)
         if count == 0:
             raise NoRecordFoundException
         else:
+            records = collection.find(query)
             atlasobj = atlas.get(atlas_name)
             NetData = pickle.loads(records[0]['value'])
             net = netattr.DynamicNet(
