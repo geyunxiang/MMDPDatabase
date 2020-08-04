@@ -216,6 +216,42 @@ def check_all_feature(rootfolder, data_source='Changgung'):
     print('Query Time', query_time)
 
 
+def LoadDynamicAttrTest(rootfolder, data_source='Changgung'):
+    loadertime = 0
+    mriscans = os.listdir(rootfolder)
+    for atlas_name in DynamicAtlas:
+        atlasobj = atlas.get(atlas_name)
+        for attrname in dynamic_attr_list:
+            for dynamic_conf in DynamiConf:
+                try:
+                    loadstart = time.time()
+                    loader.load_dynamic_attr(
+                        mriscans, atlasobj, attrname, dynamic_conf, rootfolder)
+                    loadend = time.time()
+                except OSError:
+                    print('oserror')
+                loadertime += loadend - loadstart
+    print("Loader Time ", loadertime)
+
+
+def LoadDynamicNetTest(rootfolder, data_source='Changgung'):
+    loadertime = 0
+    mriscans = os.listdir(rootfolder)
+    for mriscan in mriscans:
+        for atlas_name in DynamicAtlas:
+            atlasobj = atlas.get(atlas_name)
+            for dynamic_conf in DynamiConf:
+                try:
+                    loadstart = time.time()
+                    loader.load_single_dynamic_network(
+                        mriscan, atlasobj, dynamic_conf, rootfolder)
+                    loadend = time.time()
+                except OSError:
+                    print('oserror')
+                loadertime += loadend-loadstart
+    print("Loader Time ", loadertime)
+
+
 def DynamicAttrTest(rootfolder, data_source='Changgung'):
     """ Query and return dynamic attr object test"""
     mdb = MDB.MongoDBDatabase(data_source)
@@ -261,8 +297,32 @@ def DynamicNetTest(rootfolder, data_source='Changgung'):
     print("query count", QueryCount)
 
 
+def test_load_dynamic_networks(dynamic_rootfolder, data_source='MSA'):
+    """
+    """
+    database = MDB.MongoDBDatabase(data_source)
+    mriscans = os.listdir(dynamic_rootfolder)
+    atlas_name = 'brodmann_lrce'
+    atlasobj = atlas.get(atlas_name)
+    query_start = time.time()
+    for mriscan in mriscans:
+        try:
+            net = loader.load_single_dynamic_network(
+                mriscan, atlasobj, (100, 3), dynamic_rootfolder)
+        except OSError:
+            print('! not found! scan: %s  not found!' % (mriscan))
+    query_end = time.time()
+    print('Loader query time: %1.3fs' % (query_end - query_start))
+    query_start = time.time()
+    for mriscan in mriscans:
+        try:
+            net = database.get_dynamic_net(mriscan, atlasobj.name, 100, 3)
+        except MDB.NoRecordFoundException:
+            print('! not found! scan: %s  not found!' % (mriscan))
+    query_end = time.time()
+    print('Mongo query time: %1.3fs' % (query_end - query_start))
+
+
 if __name__ == '__main__':
     dynamic_rootfolder = "C:\\Users\\THU-EE-WL\\Downloads\\MSA Dynamic Features"
     mdb = MDB.MongoDBDatabase('Changgung')
-    mdb.get_dynamic_attr(
-        'CMSA_01', 'brodmann_lrce', 'BOLD.BC.inter', 22, 1)
