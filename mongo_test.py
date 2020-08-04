@@ -214,9 +214,35 @@ def check_all_feature(rootfolder, data_source='Changgung'):
     print('Query Time', query_time)
 
 
+def test_load_dynamic_networks(dynamic_rootfolder, data_source = 'MSA'):
+    """
+    """
+    database = MDB.MongoDBDatabase(data_source)
+    mriscans = os.listdir(dynamic_rootfolder)
+    atlas_name = 'brodmann_lrce'
+    atlasobj = atlas.get(atlas_name)
+    query_start = time.time()
+    for mriscan in mriscans:
+        try:
+            net = loader.load_single_dynamic_network(
+                mriscan, atlasobj, (100, 3), dynamic_rootfolder)
+        except OSError:
+            print('! not found! scan: %s  not found!' % (mriscan))
+    query_end = time.time()
+    print('Loader query time: %1.3fs' % (query_end - query_start))
+
+    query_start = time.time()
+    for mriscan in mriscans:
+        try:
+            net = database.get_dynamic_net(mriscan, atlasobj.name, 100, 3)
+        except MDB.NoRecordFoundException:
+            print('! not found! scan: %s  not found!' % (mriscan))
+    query_end = time.time()
+    print('Mongo query time: %1.3fs' % (query_end - query_start))
+
 if __name__ == '__main__':
     """
     rootfolder = "C:\\Users\\THU-EE-WL\\Downloads\\Compress\\test2"
     check_all_feature(rootfolder)
     """
-    pass
+    test_load_dynamic_networks('D:/Research/MSA/Features', data_source = 'MSA')

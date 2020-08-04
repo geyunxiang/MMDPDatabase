@@ -291,16 +291,16 @@ class MongoDBDatabase:
         """ Return to dynamic attr object directly """
         query = dict(scan=scan, atlas=atlas_name, feature=feature,
                      window_length=window_length, step_size=step_size)
-        records = self.db['dynamic_net'].find(
+        records = self.db['dynamic_data'].find(
             query).sort([('slice_num', pymongo.ASCENDING)])
-        count = records.count
+        count = records.count()
         if count == 0:
             raise NoRecordFoundException
         else:
             atlasobj = atlas.get(atlas_name)
             NetData = pickle.loads(records[0]['value'])
-            net = netattr.DynamicNet(
-                NetData, atlasobj, window_length, step_size, scan, feature)
+            net = netattr.DynamicNet(None, atlasobj, window_length, step_size, scan, feature)
+            net.append_one_slice(NetData)
             for idx in range(1, count):
                 net.append_one_slice(pickle.loads(records[idx]['value']))
                 return net
