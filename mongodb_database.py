@@ -177,13 +177,12 @@ class MongoDBDatabase:
         """
         if self.exist_query('dynamic', attr.scan, attr.atlasobj.name, attr.feature_name, comment, attr.window_length, attr.step_size) != None:
             raise MultipleRecordException(attr.scan, 'Please check again.')
-        for i in range(attr.data.shape[1]):
-            # i is the num of the column in data matrix
-            value = pickle.dumps(attr.data[:, i])
-            slice_num = i
+        for idx in range(attr.data.shape[1]):
+            value = pickle.dumps(attr.data[:, idx])
+            slice_num = idx
             document = self.get_document(
                 'dynamic', attr.scan, attr.atlasobj.name, attr.feature_name, value, comment, attr.window_length, attr.step_size, slice_num)
-            self.db['dynamic_data'].insert_one(document)
+            self.db['dynamic_attr'].insert_one(document)
 
     def remove_dynamic_attr(self, scan, atlas_name, feature, window_length, step_size, comment={}):
         """
@@ -200,13 +199,12 @@ class MongoDBDatabase:
         """
         if self.exist_query('dynamic', net.scan, net.atlasobj.name, net.feature_name, comment, net.window_length, net.step_size) != None:
             raise MultipleRecordException(net.scan, 'Please check again.')
-        for i in range(net.data.shape[2]):
-            # i is the slice_num of the net
-            value = pickle.dumps(net.data[:, :, i])
-            slice_num = i
+        for idx in range(net.data.shape[2]):
+            value = pickle.dumps(net.data[:, :, idx])
+            slice_num = idx
             document = self.get_document(
                 'dynamic', net.scan, net.atlasobj.name, net.feature_name, value, comment, net.window_length, net.step_size, slice_num)
-            self.db['dynamic_data'].insert_one(document)
+            self.db['dynamic_net'].insert_one(document)
 
     def remove_dynamic_network(self, scan, atlas_name, feature, window_length, step_size, comment={}):
         """
@@ -258,19 +256,17 @@ class MongoDBDatabase:
         query = dict(scan=scan, atlas=atlas_name, feature=feature,
                      window_length=window_length, step_size=step_size)
         collection = self.db['dynamic_attr']
-        count = collection.count_documents(query)
-        if count == 0:
+        if collection.find_one(query) == None:
             raise NoRecordFoundException
         else:
             records = collection.find(
                 query).sort([('slice_num', pymongo.ASCENDING)])
             atlasobj = atlas.get(atlas_name)
-            AttrData = pickle.loads(records[0]['value'])
             attr = netattr.DynamicAttr(
-                AttrData, atlasobj, window_length, step_size, scan, feature)
-            for idx in range(1, count):
-                attr.append_one_slice(pickle.loads(records[idx]['value']))
-                return attr
+                None, atlasobj, window_length, step_size, scan, feature)
+            for record in records:
+                attr.append_one_slice(pickle.loads(record['value']))
+            return attr
 
     def get_net(self, scan, atlas_name, feature):
         """  Return to an net object directly  """
@@ -291,18 +287,17 @@ class MongoDBDatabase:
         query = dict(scan=scan, atlas=atlas_name, feature=feature,
                      window_length=window_length, step_size=step_size)
         collection = self.db['dynamic_net']
-        count = collection.count_documents(query)
-        if count == 0:
+        if collection.find_one(query) == None:
             raise NoRecordFoundException
         else:
-            records = collection.find(query)
+            records = collection.find(query).sort(
+                [('slice_num', pymongo.ASCENDING)])
             atlasobj = atlas.get(atlas_name)
-            NetData = pickle.loads(records[0]['value'])
             net = netattr.DynamicNet(
-                NetData, atlasobj, window_length, step_size, scan, feature)
-            for idx in range(1, count):
-                net.append_one_slice(pickle.loads(records[idx]['value']))
-                return net
+                None, atlasobj, window_length, step_size, scan, feature)
+            for record in records:
+                net.append_one_slice(pickle.loads(record['value']))
+            return net
 
     def put_temp_data(self, temp_data, description_dict, overwrite=False):
         """
