@@ -106,7 +106,7 @@ class MongoDBDatabase:
         if mode == 'static':
             query = dict(data_source=self.data_source, scan=scan,
                          atlas=atlas_name, feature=feature, dynamic=0, comment=comment)
-        elif mode == 'dynamic':
+        elif mode == 'dynamic1' or mode == 'dynamic2' or mode == 'dynamic':
             query = dict(data_source=self.data_source, scan=scan, atlas=atlas_name, feature=feature,
                          dynamic=1, window_length=window_length, step_size=step_size, comment=comment)
         return query
@@ -176,14 +176,15 @@ class MongoDBDatabase:
         self.db['features'].insert_one(document)
 
     def remove_static_feature(self, scan, atlas_name, feature, comment={}):
-        query = self.total_query('static', scan, atlas_name, feature, comment)
+        query = dict(scan=scan, atlas=atlas_name,
+                     feature=feature, comment=comment)
         self.db['features'].find_one_and_delete(query)
 
     def save_dynamic_attr(self, attr, comment={}):
         """
         Attr is a netattr.DynamicAttr instance
         """
-        if self.exist_query('dynamic', attr.scan, attr.atlasobj.name, attr.feature_name, comment, attr.window_length, attr.step_size) != None:
+        if self.exist_query('dynamic1', attr.scan, attr.atlasobj.name, attr.feature_name, comment, attr.window_length, attr.step_size) != None:
             raise MultipleRecordException(attr.scan, 'Please check again.')
         for idx in range(attr.data.shape[1]):
             value = pickle.dumps(attr.data[:, idx])
@@ -197,22 +198,24 @@ class MongoDBDatabase:
         Fiter and delete all the slice in dynamic_attr
         Default atlas is brodmann_lrce
         """
-        query = self.total_query(
-            'dynamic', scan, atlas_name, feature, comment, window_length, step_size)
-        self.db['dynamic_data'].delete_many(query)
+        query = dict(scan=scan, atlas=atlas_name, feature=feature,
+                     comment=comment, window_length=window_length, step_size=step_size)
+        self.db['dynamic_attr'].delete_many(query)
 
     def save_dynamic_network(self, net, comment={}):
-        """
-        Net is a netattr.DynamicNet instance
-        """
-        if self.exist_query('dynamic', net.scan, net.atlasobj.name, net.feature_name, comment, net.window_length, net.step_size) != None:
-            raise MultipleRecordException(net.scan, 'Please check again.')
+        """ Net is a netattr.DynamicNet instance """
+        query = self.get_query('dynamic', net.scan, net.atlasobj.name,
+                               net.feature_name, comment, net.window_length, net.step_size)
         for idx in range(net.data.shape[2]):
-            value = pickle.dumps(net.data[:, :, idx])
-            slice_num = idx
-            document = self.get_document(
-                'dynamic', net.scan, net.atlasobj.name, net.feature_name, value, comment, net.window_length, net.step_size, slice_num)
-            self.db['dynamic_net'].insert_one(document)
+            query['slice_num'] = idx
+            if self.db['dynamic_net'].find_one(query) != None:
+                raise MultipleRecordException(net.scan, 'Please check again.')
+            else:
+                value = pickle.dumps(net.data[:, :, idx])
+                slice_num = idx
+                document = self.get_document(
+                    'dynamic', net.scan, net.atlasobj.name, net.feature_name, value, comment, net.window_length, net.step_size, slice_num)
+                self.db['dynamic_net'].insert_one(document)
 
     def remove_dynamic_network(self, scan, atlas_name, feature, window_length, step_size, comment={}):
         """
@@ -220,9 +223,9 @@ class MongoDBDatabase:
         Default atlas is bromann_lrce 
         Default feature is BOLD.net
         """
-        query = self.total_query(
-            'dynamic', scan, atlas_name, feature, comment, window_length, step_size)
-        self.db['dynamic_data'].delete_many(query)
+        query = dict(scan=scan, atlas=atlas_name, feature=feature,
+                     comment=comment, window_length=window_length, step_size=step_size)
+        self.db['dynamic_net'].delete_many(query)
 
     def save_mat_dict(self, scan, mat, datadict):
         """ mat : name of mat file"""

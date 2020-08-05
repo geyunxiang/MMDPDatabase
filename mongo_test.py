@@ -107,21 +107,20 @@ def generate_dynamic_database_networks(dynamic_rootfolder, data_source='Changgun
     atlas_name = 'brodmann_lrce'
     atlasobj = atlas.get(atlas_name)
     for mriscan in mriscans:
-        for atlas_name in DynamicAtlas:
-            for dynamic_conf in DynamiConf:
-                try:
-                    net = loader.load_single_dynamic_network(
-                        mriscan, atlasobj, dynamic_conf, dynamic_rootfolder)
-                    database.save_dynamic_network(net)
-                except OSError:
-                    print('! Not found! scan: %s atlas: %s' %
-                          (mriscan, atlas_name))
-                except MDB.MultipleRecordException:
-                    print('! Multiple found! scan: %s atlas:%s' %
-                          (mriscan, atlas_name))
+        for dynamic_conf in DynamiConf:
+            try:
+                net = loader.load_single_dynamic_network(
+                    mriscan, atlasobj, dynamic_conf, dynamic_rootfolder)
+                database.save_dynamic_network(net)
+            except OSError:
+                print('! Not found! scan: %s atlas: %s' %
+                      (mriscan, atlas_name))
+            except MDB.MultipleRecordException:
+                print('! Multiple found! scan: %s atlas:%s' %
+                      (mriscan, atlas_name))
 
 
-def generate_EEG_database(rootfolder, data_source='Changung'):
+def generate_EEG_database(rootfolder, data_source='Changgung'):
     mdb = MDB.MongoDBDatabase(data_source)
     mriscans = os.listdir(rootfolder)
     for mriscan in mriscans:
@@ -133,7 +132,7 @@ def generate_EEG_database(rootfolder, data_source='Changung'):
             try:
                 mdb.save_mat_dict(mriscan, mat, datadict)
             except MDB.MultipleRecordException:
-                print('! Mutiple record found scan: %s, mat: %s ' %
+                print('! Mutiple record found ! scan: %s, mat: %s' %
                       (mriscan, mat))
 
 
@@ -325,4 +324,9 @@ def test_load_dynamic_networks(dynamic_rootfolder, data_source='MSA'):
 
 if __name__ == '__main__':
     dynamic_rootfolder = "C:\\Users\\THU-EE-WL\\Downloads\\MSA Dynamic Features"
-    mdb = MDB.MongoDBDatabase('Changgung')
+    rootfolder = "C:\\Users\\THU-EE-WL\\Desktop\\EEG"
+    """
+    generate_EEG_database(rootfolder)
+    generate_dynamic_database_attrs(dynamic_rootfolder)
+    """
+    generate_dynamic_database_networks(dynamic_rootfolder)
