@@ -1,9 +1,12 @@
 import numpy as np
-import mmdpdb, mongodb_database
+import mmdpdb, mongodb_database, redis_database
 from mmdps.proc import loader, atlas
 from mmdps.util import loadsave
 import time,pymongo,pickle
 import threading
+import os
+from mmdps import rootconfig
+from mmdps.proc import atlas, loader
 
 SCAN =['baihanxiang_20190307','caipinrong_20180412','baihanxiang_20190211','caochangsheng_20161027',
        'caochangsheng_20161114','chenguwen_20150711','chenhua_20150711','chenyifan_20150612',
@@ -20,6 +23,23 @@ DTNAMIC_FEATURE=['bold_net','bold_net_attr']
 WINDOW_LENTH=[22,50,100]
 STEP_SIZE=[1,3]
 
+
+atlas_list = ['brodmann_lr', 'brodmann_lrce',
+              'aal', 'aicha', 'bnatlas', 'aal2']
+
+attr_list = ['BOLD.BC.inter', 'BOLD.CCFS.inter',
+             'BOLD.LE.inter', 'BOLD.WD.inter', 'BOLD.net']
+
+attr_name = ['bold_interBC.csv', 'bold_interCCFS.csv',
+             'bold_interLE.csv', 'bold_interWD.csv', 'bold_net.csv']
+
+dynamic_attr_list = ['inter-region_bc',
+                     'inter-region_ccfs', 'inter-region_le', 'inter-region_wd']
+
+attr_list_full = ['BOLD.BC.inter', 'BOLD.CCFS.inter', 'BOLD.LE.inter',
+                  'BLD.WD.inter', 'BOLD.net.inter', 'DWI.FA', 'DWI.MD', 'DWI.net', 'DWI.MD', 'DWI.FA', 'DWI.net']
+
+dynamic_conf_list = [[22, 1], [50, 1], [100, 1], [100, 3]]
 def test_cache():
 	db = mmdpdb.MMDPDatabase()
 	# db.append_cache_list('test cache float', 1.123)
@@ -74,15 +94,54 @@ def file_creater(size):
                   'window_length': size, 'step_size': 1, 'slice_num': i, 'value': pickle.dumps(a)}
 		mycol.insert_one(mydict)
 		np.savetxt('../Feature/'+str(i)+'.csv',a)
-def mmdpdb_speed_test(size):
-	a = mmdpdb.MMDPDatabase('test')
-	start = time.perf_counter()
-	a.get_dynamic_feature('test_scan','aal','test_feature',size,1)
-	end = time.perf_counter()
-	print('mmdpdb running time is : %s s' %end-start)
+def mmdpdb_speed_test(data_source='Changgung'):
+	"""
+	    本程序请运行两遍，以测试mmdpdb的初始化和查询性能
+	    redis目前只支持查询性能的测试，是否有必要测试存储性能
+	"""
+	mdb = mongodb_database.MongoDBDatabase(data_source)
+	rdb = redis_database.RedisDatabase()
+	mdpdb = mmdpdb.MMDPDatabase(data_source)
+	loader_time = 0
+	mongo_time = 0
+	redis_time = 0
+	mmdpdb_time = 0
+	mriscans = os.listdir(rootconfig.path.feature_root)
+	for mriscan in mriscans:
+		atlas_path = os.path.join(rootconfig.path.feature_root, mriscan)
+		for atlas_name in get_atlas_list(atlas_path, atlas_list):
+			atlasobj = atlas.get(atlas_name)
+			attr_path = os.path.join(atlas_path, atlas_name)
+			for attr_name in get_attr_list(attr_path, attr_list):
+				loader_start = time.time()
+				attr = loader.load_attrs([mriscan], atlasobj, attr_name)
+				loader_end = time.time()
+				if mdb.exist_query('static', attr[0].scan, attr[0].atlasobj.name, attr[0].feature_name) != None:
+					print(attr[0].scan, 'Please check again.')
+				else:
+					mongo_start = time.time()
+					attrdata = pickle.dumps(attr[0].data)
+					document = mdb.get_document(
+						'static', attr[0].scan, attr[0].atlasobj.name, attr[0].feature_name, attrdata)
+					mdb.db['features'].insert_one(document)
+					mongo_end = time.time()
+					loader_time += loader_end - loader_start
+					mongo_time += mongo_end - mongo_start
+					mmdpdb_start = time.time()
+					mdpdb.get_feature(attr[0].scan, attr[0].atlasobj.name, attr[0].feature_name)
+					mmdpdb_end = time.time()
+					mmdpdb_time += mmdpdb_end - mmdpdb_start
+					redis_start = time.time()
+					rdb.get_static_value(data_source, attr[0].scan, attr[0].atlasobj.name, attr[0].feature_name)
+					redis_end = time.time()
+					redis_time += redis_end - redis_start
+	print(loader_time)
+	print(mongo_time)
+	print(redis_time)
+	print(mmdpdb_time)
+	mdb.dbStats()
+	mdb.colStats()
 
-b = mongodb_database.MongoDBDatabase('Changgung')
-a = mmdpdb.MMDPDatabase()
 class MyThread(threading.Thread):
 	def __init__(self, scan):
 		super(MyThread, self).__init__()
@@ -126,15 +185,6 @@ def thread_dynamic_test():
 		i.start()
 	for i in lst:
 		i.join()
+
 if __name__ == '__main__':
-	# test_cache()
-	#a = mmdpdb.MMDPDatabase()
-	#b = a.get_dynamic_feature(['123'],'123','123',1,'2')
-	#print(b[0].data.shape)
-	# insert_mongo('BC', (100, 3))
-	# test_get_features()
-	# test_loader('BC', (100, 3))
-	a = mmdpdb.MMDPDatabase()
-	print(a.get_feature('baihanxiang_20190307','brodmann_lrce','bold_net').data)
-	#compare_loader_database()
-	#thread_dynamic_test()
+	mmdpdb_speed_test()

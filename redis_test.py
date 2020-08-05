@@ -343,4 +343,5 @@ if __name__ == '__main__':
     #hash_test()
     #nparray_test()
     #encode_test()
-    file_creater(10)
+    #file_creater(10)
+    print(time.time())
