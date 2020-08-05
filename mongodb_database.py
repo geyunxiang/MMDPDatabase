@@ -184,9 +184,13 @@ class MongoDBDatabase:
         """
         Attr is a netattr.DynamicAttr instance
         """
-        if self.exist_query('dynamic1', attr.scan, attr.atlasobj.name, attr.feature_name, comment, attr.window_length, attr.step_size) != None:
-            raise MultipleRecordException(attr.scan, 'Please check again.')
+        query = self.get_query('dynamic', attr.scan, attr.atlasobj.name,
+                               attr.feature_name, comment, attr.window_length, attr.step_size)
         for idx in range(attr.data.shape[1]):
+            query['slice_num'] = idx
+            if self.db['dynamic_attr'].find_one(query) != None:
+                raise MultipleRecordException(
+                    attr.scan, 'Please check again.')
             value = pickle.dumps(attr.data[:, idx])
             slice_num = idx
             document = self.get_document(
