@@ -29,7 +29,7 @@
             "alphapower",
             "betapower",
             "gammapower",
-            "allpower"
+            "allbandpower"
         ]
     },
     "chan_abspower_uv.mat": {
@@ -89,19 +89,19 @@
         "feature": "plv",
         "fields": []
     },
-    "prep_info_select": {
+    "prep_info_select.mat": {
         "feature": "prep_info_select",
         "fields": [
-            "origin",
+            "origin_length",
             "select_length",
             "final_length",
-            "band_channel",
+            "bad_channel",
             "epoch_origin_num",
             "epoch_final_num",
             "SASICA",
             "IClabel",
-            "goodlcldx",
-            "badldx"
+            "goodIcIdx",
+            "badIdx"
         ]
     },
     "qEEG_dB.mat": {
@@ -130,6 +130,17 @@
     },
     "ratio_dB.mat": {
         "feature": "ratio_dB",
+        "fields": [
+            "DAR",
+            "TBR",
+            "TAR",
+            "TABR",
+            "DTABR",
+            "Qslowing"
+        ]
+    },
+    "ratio_uv.mat": {
+        "feature": "ratio_uv",
         "fields": [
             "DAR",
             "TBR",
