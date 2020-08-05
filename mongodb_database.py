@@ -61,13 +61,11 @@ class MongoDBDatabase:
         if user == None and pwd == None:
             self.client = pymongo.MongoClient(host, port)
         else:
-            uri = "mongodb://" + user + ":" + pwd + \
-                "@" + host + ":" + str(port)
+            uri = 'mongodb://%s:%s@%s:%s' % (user, pwd, host, str(port))
             if dbname != None:
                 uri = uri+"/" + dbname
             self.client = pymongo.MongoClient(uri)
         print(self.client)
-
         with open("EEG_conf.json", 'r') as f:
             self.EEG_conf = json.loads(f.read())
         self.data_source = data_source
@@ -131,7 +129,7 @@ class MongoDBDatabase:
         dic.pop('__globals__')
         return dic
 
-    def find(db, col, query):
+    def find(self, db, col, query):
         """ Gereral query"""
         db = self.client[db]
         col = db[col]
