@@ -96,8 +96,7 @@ class MongoDBDatabase:
             self.col = self.db['features']
         elif mode == 'dynamic1':
             self.col = self.db['dynamic_attr']
-        elif:
-            mode == 'dynamic2':
+        elif mode == 'dynamic2':
             self.col = self.db['dynamic_net']
         else:
             print("please input correct mode")
