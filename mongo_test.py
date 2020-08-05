@@ -16,11 +16,10 @@ from mmdps.proc import atlas, loader
 atlas_list = ['brodmann_lr', 'brodmann_lrce',
               'aal', 'aicha', 'bnatlas', 'aal2']
 
+DynamicAtlas = ['brodmann_lrce', 'aal']
+
 attr_list = ['BOLD.BC.inter', 'BOLD.CCFS.inter',
              'BOLD.LE.inter', 'BOLD.WD.inter', 'BOLD.net']
-
-attr_name = ['bold_interBC.csv', 'bold_interCCFS.csv',
-             'bold_interLE.csv', 'bold_interWD.csv', 'bold_net.csv']
 
 dynamic_attr_list = ['inter-region_bc',
                      'inter-region_ccfs', 'inter-region_le', 'inter-region_wd']
@@ -28,7 +27,7 @@ dynamic_attr_list = ['inter-region_bc',
 attr_list_full = ['BOLD.BC.inter', 'BOLD.CCFS.inter', 'BOLD.LE.inter',
                   'BLD.WD.inter', 'BOLD.net.inter', 'DWI.FA', 'DWI.MD', 'DWI.net', 'DWI.MD', 'DWI.FA', 'DWI.net']
 
-dynamic_conf_list = [[22, 1], [50, 1], [100, 1], [100, 3]]
+DynamiConf = [[22, 1], [50, 1], [100, 1], [100, 3]]
 
 
 with open("EEG_conf.json", 'r') as f:
@@ -85,21 +84,21 @@ def generate_static_database_networks(data_source='Changgung'):
 def generate_dynamic_database_attrs(dynamic_rootfolder, data_source='Changgung'):
     database = MDB.MongoDBDatabase(data_source)
     mriscans = os.listdir(dynamic_rootfolder)
-    atlas_name = 'brodmann_lrce'
-    atlasobj = atlas.get(atlas_name)
     for mriscan in mriscans:
-        for dynamic_conf in dynamic_conf_list:
-            for attrname in dynamic_attr_list:
-                try:
-                    attr = loader.load_single_dynamic_attr(
-                        mriscan, atlasobj, attrname, dynamic_conf, dynamic_rootfolder)
-                    database.save_dynamic_attr(attr)
-                except OSError:
-                    print('! not found! scans: %s, attr: %s not found!' %
-                          (mriscan, attrname))
-                except MDB.MultipleRecordException:
-                    print('! Mutiple record found scan: %s, attr: %s' %
-                          (mriscan, attrname))
+        for atlas_name in DynamicAtlas:
+            atlasobj = atlas.get(atlas_name)
+            for dynamic_conf in DynamiConf:
+                for attrname in dynamic_attr_list:
+                    try:
+                        attr = loader.load_single_dynamic_attr(
+                            mriscan, atlasobj, attrname, dynamic_conf, dynamic_rootfolder)
+                        database.save_dynamic_attr(attr)
+                    except OSError:
+                        print('! Not found! scan: %s, atlas: %s, attr: %s' %
+                              (mriscan, atlas_name, attrname))
+                    except MDB.MultipleRecordException:
+                        print('! Mutiple found scan: %s,atlas: %s, attr: %s' %
+                              (mriscan, atlas_name, attrname))
 
 
 def generate_dynamic_database_networks(dynamic_rootfolder, data_source='Changgung'):
@@ -108,15 +107,18 @@ def generate_dynamic_database_networks(dynamic_rootfolder, data_source='Changgun
     atlas_name = 'brodmann_lrce'
     atlasobj = atlas.get(atlas_name)
     for mriscan in mriscans:
-        for dynamic_conf in dynamic_conf_list:
-            try:
-                net = loader.load_single_dynamic_network(
-                    mriscan, atlasobj, dynamic_conf, dynamic_rootfolder)
-                database.save_dynamic_network(net)
-            except OSError:
-                print('! not found! scan: %s  not found!' % (mriscan))
-            except MDB.MultipleRecordException:
-                print('! Multiple record found scan: %s' % (mriscan))
+        for atlas_name in DynamicAtlas:
+            for dynamic_conf in DynamiConf:
+                try:
+                    net = loader.load_single_dynamic_network(
+                        mriscan, atlasobj, dynamic_conf, dynamic_rootfolder)
+                    database.save_dynamic_network(net)
+                except OSError:
+                    print('! Not found! scan: %s atlas: %s' %
+                          (mriscan, atlas_name))
+                except MDB.MultipleRecordException:
+                    print('! Multiple found! scan: %s atlas:%s' %
+                          (mriscan, atlas_name))
 
 
 def generate_EEG_database(rootfolder, data_source='Changung'):
@@ -214,9 +216,90 @@ def check_all_feature(rootfolder, data_source='Changgung'):
     print('Query Time', query_time)
 
 
-def test_load_dynamic_networks(dynamic_rootfolder, data_source = 'MSA'):
-    """
-    """
+def LoadDynamicAttrTest(rootfolder, data_source='Changgung'):
+    loadertime = 0
+    mriscans = os.listdir(rootfolder)
+    for atlas_name in DynamicAtlas:
+        atlasobj = atlas.get(atlas_name)
+        for attrname in dynamic_attr_list:
+            for dynamic_conf in DynamiConf:
+                try:
+                    loadstart = time.time()
+                    loader.load_dynamic_attr(
+                        mriscans, atlasobj, attrname, dynamic_conf, rootfolder)
+                    loadend = time.time()
+                except OSError:
+                    print('oserror')
+                loadertime += loadend - loadstart
+    print("Loader Time ", loadertime)
+
+
+def LoadDynamicNetTest(rootfolder, data_source='Changgung'):
+    loadertime = 0
+    mriscans = os.listdir(rootfolder)
+    for mriscan in mriscans:
+        for atlas_name in DynamicAtlas:
+            atlasobj = atlas.get(atlas_name)
+            for dynamic_conf in DynamiConf:
+                try:
+                    loadstart = time.time()
+                    loader.load_single_dynamic_network(
+                        mriscan, atlasobj, dynamic_conf, rootfolder)
+                    loadend = time.time()
+                except OSError:
+                    print('oserror')
+                loadertime += loadend-loadstart
+    print("Loader Time ", loadertime)
+
+
+def DynamicAttrTest(rootfolder, data_source='Changgung'):
+    """ Query and return dynamic attr object test"""
+    mdb = MDB.MongoDBDatabase(data_source)
+    QueryTime = QueryCount = 0
+    mriscans = os.listdir(rootfolder)
+    for mriscan in mriscans:
+        for atlas_name in DynamicAtlas:
+            for dynamic_conf in DynamiConf:
+                for attrname in dynamic_attr_list:
+                    try:
+                        query_start = time.time()
+                        mdb.get_dynamic_attr(
+                            mriscan, atlas_name, attrname, dynamic_conf[0], dynamic_conf[1])
+                        query_end = time.time()
+                        QueryTime += query_end - query_start
+                        QueryCount += 1
+                    except MDB.NoRecordFoundException:
+                        print('! Not found! scan: %s, atlas: %s, attr: %s' %
+                              (mriscan, atlas_name, attrname))
+    print("query time", QueryTime)
+    print("query count", QueryCount)
+
+
+def DynamicNetTest(rootfolder, data_source='Changgung'):
+    """ Query and return dynamic net object test"""
+    mdb = MDB.MongoDBDatabase(data_source)
+    QueryTime = QueryCount = 0
+    mriscans = os.listdir(rootfolder)
+    for mriscan in mriscans:
+        for atlas_name in DynamicAtlas:
+            for dynamic_conf in DynamiConf:
+                try:
+                    query_start = time.time()
+                    mdb.get_dynamic_net(
+                        mriscan, atlas_name, dynamic_conf[0], dynamic_conf[1])
+                    query_end = time.time()
+                    QueryTime += query_end - query_start
+                    QueryCount += 1
+                except MDB.NoRecordFoundException:
+                    print('! Not found! scan: %s, atlas: %s' %
+                          (mriscan, atlas_name))
+    print("query time", QueryTime)
+    print("query count", QueryCount)
+
+
+def test_load_dynamic_networks(dynamic_rootfolder, data_source='MSA'):
+
+    test_load_dynamic_networks('D:/Research/MSA/Features', data_source = 'MSA')
     database = MDB.MongoDBDatabase(data_source)
     mriscans = os.listdir(dynamic_rootfolder)
     atlas_name = 'brodmann_lrce'
@@ -230,7 +313,6 @@ def test_load_dynamic_networks(dynamic_rootfolder, data_source = 'MSA'):
             print('! not found! scan: %s  not found!' % (mriscan))
     query_end = time.time()
     print('Loader query time: %1.3fs' % (query_end - query_start))
-
     query_start = time.time()
     for mriscan in mriscans:
         try:
@@ -240,9 +322,7 @@ def test_load_dynamic_networks(dynamic_rootfolder, data_source = 'MSA'):
     query_end = time.time()
     print('Mongo query time: %1.3fs' % (query_end - query_start))
 
+
 if __name__ == '__main__':
-    """
-    rootfolder = "C:\\Users\\THU-EE-WL\\Downloads\\Compress\\test2"
-    check_all_feature(rootfolder)
-    """
-    test_load_dynamic_networks('D:/Research/MSA/Features', data_source = 'MSA')
+    dynamic_rootfolder = "C:\\Users\\THU-EE-WL\\Downloads\\MSA Dynamic Features"
+    mdb = MDB.MongoDBDatabase('Changgung')
