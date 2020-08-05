@@ -299,7 +299,7 @@ class MongoDBDatabase:
                      window_length=window_length, step_size=step_size)
         collection = self.db['dynamic_net']
         if collection.find_one(query) == None:
-            raise NoRecordFoundException
+            raise NoRecordFoundException((scan, atlas, feature))
         else:
             records = collection.find(query).sort(
                 [('slice_num', pymongo.ASCENDING)])

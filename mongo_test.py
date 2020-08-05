@@ -296,7 +296,7 @@ def DynamicNetTest(rootfolder, data_source='Changgung'):
     print("query count", QueryCount)
 
 
-def test_load_dynamic_networks(dynamic_rootfolder, data_source='MSA'):
+def test_load_dynamic_networks(dynamic_rootfolder, data_source='Changgung'):
     """
     """
     database = MDB.MongoDBDatabase(data_source)
@@ -307,7 +307,7 @@ def test_load_dynamic_networks(dynamic_rootfolder, data_source='MSA'):
     for mriscan in mriscans:
         try:
             net = loader.load_single_dynamic_network(
-                mriscan, atlasobj, (100, 3), dynamic_rootfolder)
+                mriscan, atlasobj, (22, 1), dynamic_rootfolder)
         except OSError:
             print('! not found! scan: %s  not found!' % (mriscan))
     query_end = time.time()
@@ -315,7 +315,7 @@ def test_load_dynamic_networks(dynamic_rootfolder, data_source='MSA'):
     query_start = time.time()
     for mriscan in mriscans:
         try:
-            net = database.get_dynamic_net(mriscan, atlasobj.name, 100, 3)
+            net = database.get_dynamic_net(mriscan, atlasobj.name, 22, 1)
         except MDB.NoRecordFoundException:
             print('! not found! scan: %s  not found!' % (mriscan))
     query_end = time.time()
@@ -328,5 +328,6 @@ if __name__ == '__main__':
     """
     generate_EEG_database(rootfolder)
     generate_dynamic_database_attrs(dynamic_rootfolder)
-    """
     generate_dynamic_database_networks(dynamic_rootfolder)
+    """
+    test_load_dynamic_networks(dynamic_rootfolder)
