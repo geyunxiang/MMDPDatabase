@@ -255,17 +255,23 @@ class MongoDBDatabase:
     def get_mat(self, scan, mat, field):
         """ Get mat from mongo """
         query = dict(scan=scan, feature=mat)
-        if self.db['EEG'].find(query) == None:
+        count = self.db['EEG'].count_documents(query)
+        if count == 0:
             raise NoRecordFoundException((scan, mat))
+        elif count > 1:
+            raise MultipleRecordException((scan, mat))
         else:
-            records = self.db['EEG'].find(query)
+            records = self.db['EEG'].find_one(query)
             for record in records:
                 if field in record.keys():
-                    data = pickle.loads(record[field])[0, 0]
                     matname = '%s_%s.mat' % (mat, field)
-                    scio.savemat(matname, {field: data})
+                    dic = {}
+                    dic[field] = pickle.loads(record[field])[0, 0]
+                    scio.savemat(matname, dic)
+                    return dic
                 else:
                     print('%s not in %s' % (field, mat))
+                    return None
 
     def get_attr(self, scan, atlas_name, feature):
         """  Return to an attr object  directly """
