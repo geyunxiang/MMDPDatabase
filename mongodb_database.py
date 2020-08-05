@@ -94,8 +94,11 @@ class MongoDBDatabase:
         "And you can extend with this"
         if mode == 'static':
             self.col = self.db['features']
-        elif mode == 'dynamic':
-            self.col = self.db['dynamic_data']
+        elif mode == 'dynamic1':
+            self.col = self.db['dynamic_attr']
+        elif:
+            mode == 'dynamic2':
+            self.col = self.db['dynamic_net']
         else:
             print("please input correct mode")
         return self.col
@@ -129,6 +132,12 @@ class MongoDBDatabase:
         dic.pop('__globals__')
         return dic
 
+    def find(db, col, query):
+        """ Gereral query"""
+        db = self.client[db]
+        col = db[col]
+        return col.find(query)
+
     def quick_query(self, mode, scan):
         """Query only with scan """
         return self.getCol(mode).find(dict(scan=scan))
@@ -143,7 +152,7 @@ class MongoDBDatabase:
         if mode == 'dynamic':
             return self.getCol(mode).find(query).sort("slice_num", 1)
         elif mode == 'static':
-             return self.getCol(mode).find(query)
+            return self.getCol(mode).find(query)
 
     def exist_query(self, mode, scan, atlas_name, feature, comment={}, window_length=None, step_size=None):
         """ Check a record if exist """
