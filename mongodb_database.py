@@ -37,6 +37,7 @@ import time
 import json
 import logging
 import scipy.io as scio
+import numpy as np
 
 from pymongo import monitoring
 from mmdps.proc import atlas, netattr
@@ -250,6 +251,21 @@ class MongoDBDatabase:
     def remove_mat_dict(self, scan, feature):
         query = dict(scan=scan, feature=feature)
         self.db['EEG'].delete_many(query)
+
+    def get_mat(self, scan, mat, field):
+        """ Get mat from mongo """
+        query = dict(scan=scan, feature=mat)
+        if self.db['EEG'].find(query) == None:
+            raise NoRecordFoundException((scan, mat))
+        else:
+            records = self.db['EEG'].find(query)
+            for record in records:
+                if field in record.keys():
+                    data = pickle.loads(record[field])[0, 0]
+                    matname = '%s_%s.mat' % (mat, field)
+                    scio.savemat(matname, {field: data})
+                else:
+                    print('%s not in %s' % (field, mat))
 
     def get_attr(self, scan, atlas_name, feature):
         """  Return to an attr object  directly """
