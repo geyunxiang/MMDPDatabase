@@ -1,4 +1,5 @@
 import numpy as np
+import json
 import mmdpdb, mongodb_database, redis_database
 from mmdps.proc import loader, atlas
 from mmdps.util import loadsave
@@ -7,6 +8,7 @@ import threading
 import os
 from mmdps import rootconfig
 from mmdps.proc import atlas, loader
+from mmdps.util import loadsave, clock
 
 SCAN =['baihanxiang_20190307','caipinrong_20180412','baihanxiang_20190211','caochangsheng_20161027',
        'caochangsheng_20161114','chenguwen_20150711','chenhua_20150711','chenyifan_20150612',
@@ -83,17 +85,7 @@ def compare_loader_database():
 	print(feat_loader.data.shape)
 	diff = np.abs(feat.data - feat_loader.data)
 	print('maxdiff: ', np.max(diff))
-
-def file_creater(size):
-	myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-	mydb = myclient['test']
-	mycol = mydb['dynamic_data']
-	for i in range(size):
-		a = np.random.rand(100,100)
-		mydict = {'data_source' : 'test', 'scan': 'test_scan', 'atlas': 'aal', 'feature': 'test_feature', 'dynamic': 1,
-                  'window_length': size, 'step_size': 1, 'slice_num': i, 'value': pickle.dumps(a)}
-		mycol.insert_one(mydict)
-		np.savetxt('../Feature/'+str(i)+'.csv',a)
+'''
 def mmdpdb_speed_test(data_source='Changgung'):
 	"""
 	    本程序请运行两遍，以测试mmdpdb的初始化和查询性能
@@ -141,50 +133,13 @@ def mmdpdb_speed_test(data_source='Changgung'):
 	print(mmdpdb_time)
 	mdb.dbStats()
 	mdb.colStats()
-
-class MyThread(threading.Thread):
-	def __init__(self, scan):
-		super(MyThread, self).__init__()
-		self.scan = scan
-
-	def run(self):
-		x = a.get_feature(self.scan, 'aal', 'bold_interBC')
-		y = b.query_static(self.scan, 'aal', 'bold_interBC')
-		if (x.data - pickle.loads(y[0]['value'])).any():
-			print(x.data)
-			print(pickle.loads(y[0]['value']))
-def thread_test():
-	lst = []
-	for i in SCAN:
-		lst.append(MyThread('baihanxiang_20190307'))
-	for i in lst:
-		i.start()
-	for i in lst:
-		i.join()
-class MyThread_dynamic(threading.Thread):
-	def __init__(self, scan):
-		super(MyThread_dynamic, self).__init__()
-		self.scan = scan
-
-	def run(self):
-		x = a.get_dynamic_feature(self.scan, 'brodmann_lrce', 'bold_net',22,1)
-		y = b.query_dynamic(self.scan,'brodmann_lrce','bold_net',22,1)
-		z = []
-		for i in y:
-			z.append(pickle.loads(i['value']))
-		z = np.array(z)
-		z = z.swapaxes(0,2).swapaxes(0,1)
-		if (x.data - z).any():
-			print(x.data)
-			print(z)
-def thread_dynamic_test():
-	lst = []
-	for i in DTNAMIC_SCAN:
-		lst.append(MyThread_dynamic('CMSA_01'))
-	for i in lst:
-		i.start()
-	for i in lst:
-		i.join()
-
+'''
+def sqltest():
+	with open('recordInformation.json', 'r', encoding='utf8') as fp:
+		json_data = json.load(fp)
+		a = mmdpdb.SQLiteDB('test.db')
+		#a.init()
+		#a.insert_eegrow(json_data)
+		a.deleteGroupByName('nmsl')
 if __name__ == '__main__':
-	mmdpdb_speed_test()
+	sqltest()

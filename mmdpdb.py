@@ -15,7 +15,7 @@ import os
 from sqlalchemy import create_engine, exists, and_
 from sqlalchemy.orm import sessionmaker
 
-from sqlalchemy.orm.exc import MultipleResultsFound
+from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
 from mmdps.proc import atlas
 from mmdps.dms import tables
@@ -187,6 +187,8 @@ class SQLiteDB:
 
 	def new_session(self):
 		return self.Session()
+	def init(self):
+		tables.Base.metadata.create_all(self.engine)
 
 	def insert_mrirow(self, scan, hasT1, hasT2, hasBOLD, hasDWI):
 		"""Insert one mriscan record."""
@@ -229,9 +231,80 @@ class SQLiteDB:
 		print('New patient new scan %s inserted' % scan)
 		return 0
 
-	def getScansInGroup(self, groupName):
+	def insert_eegrow(self, eegjson):
+		def to_gender(gen):
+			if gen == 0:
+				return 'F'
+			else:
+				return 'M'
+		try:
+			ret = self.session.query(tables.EEGScan).filter(tables.EEGScan.examid == eegjson['ExamID']).scalar()
+			if ret:
+				net = self.session.query(tables.EEGScan).filter(tables.EEGScan.examid == eegjson['ExamID']).one()
+				print(net.person.name)
+				print('scan %s has already existed in database' % eegjson['ExamID'])
+				return 0
+		except MultipleResultsFound:
+			print('Error when importing: multiple scan records found for %s' % eegjson['ExamID'])
+			return 1
+		try:
+			machine = self.session.query(tables.EEGMachine).filter(tables.EEGMachine.devicename == eegjson["DeviceName"]).one()
+		except MultipleResultsFound:
+			print('Error when importing: multiple machine records found for %s' % eegjson["DeviceName"])
+			return 1
+		except NoResultFound:
+			machine = tables.EEGMachine(devicename=eegjson["DeviceName"],
+										devicemode=eegjson["DeviceMode"],
+										recordchannelsettinggroup=eegjson["RecordChannelSettingGroup"],
+										recordmontagename=eegjson["RecordMontageName"],
+										recordprotocolname=eegjson["RecordProtocolName"],
+										recordeegcapname=eegjson["RecordEEGCapName"])
+			self.session.add(machine)
+		scan = tables.EEGScan(examid=eegjson["ExamID"],
+							  date=clock.eeg_time(eegjson["ExamTime"]),
+							  examitem=eegjson["ExamItem"],
+							  impedancepos=','.join(eegjson["ImpedanceData"]["Item1"]),
+							  impedancedata=','.join([str(i) for i in eegjson["ImpedanceData"]["Item2"]]),
+							  impedanceonline=eegjson["ImpedanceOnline"],
+							  begintimestamp=','.join([str(i["BeginTimeStamp"]) for i in eegjson["DataFileInformations"]]),
+							  digitalmin=eegjson["DigitalMinimum"],
+							  digitalmax=eegjson["DigitalMaximum"],
+							  physicalmin=eegjson["PhysicalMinimum"],
+							  physicalmax=eegjson["PhysicalMaximum"],
+							  samplerate=eegjson["SampleRate"]
+							  )
+		self.session.add(scan)
+		machine.eegscans.append(scan)
+		try:
+			person = self.session.query(tables.Person).filter(tables.Person.name == eegjson["PatientName"], tables.Person.eegid == eegjson["PatientID"]).one()
+			if person.gender != to_gender(eegjson["Gender"]) or person.birth != clock.eeg_time(eegjson["BirthDate"]):
+				raise Exception('Information about %s is not consistent' % eegjson["PatientName"])
+			person.eegscans.append(scan)
+			self.session.commit()
+			print('Old patient new scan %s inserted' % eegjson["PatientName"])
+			return 0
+		except MultipleResultsFound:
+			print('Error when importing: multiple person records found for %s' % eegjson["PatientName"])
+			return 2
+		except NoResultFound:
+			person = tables.Person(name=eegjson["PatientName"],
+								   eegid=eegjson["PatientID"],
+								   gender=to_gender(eegjson["Gender"]),
+								   birth=clock.eeg_time(eegjson["BirthDate"])
+			)
+			self.session.add(person)
+			person.eegscans.append(scan)
+			self.session.commit()
+			print('New patient new scan %s inserted' % eegjson["PatientName"])
+			return 0
+
+	def getMRIScansInGroup(self, groupName):
 		group = self.session.query(tables.Group).filter_by(name = groupName).one()
-		return group.scans
+		return group.mriscans
+
+	def getEEGScansInGroup(self, groupName):
+		group = self.session.query(tables.Group).filter_by(name = groupName).one()
+		return group.eegscans
 
 	def getNamesInGroup(self, groupName):
 		group = self.session.query(tables.Group).filter_by(name = groupName).one()
@@ -251,56 +324,56 @@ class SQLiteDB:
 		"""
 		return self.session.query(tables.Group).filter_by(name = 'Changgung HC').one()
 
-	def newGroupByScans(self, groupName, scanList, desc = None):
+	def newGroupByScans_forMRI(self, groupName, scanList, desc = None):
 		"""
-		Initialize a group by a list of scans
+		Initialize a group by a list of mriscans
 		"""
 		group = tables.Group(name = groupName, description = desc)
 		# check if group already exist
 		try:
 			self.session.query(tables.Group).filter_by(name = groupName).one()
-		except sqlalchemy.orm.exc.NoResultFound:
+		except NoResultFound:
 			# alright
 			for scan in scanList:
 				db_scan = self.session.query(tables.MRIScan).filter_by(filename = scan).one()
-				group.scans.append(db_scan)
+				group.mriscans.append(db_scan)
 				group.people.append(db_scan.person)
 			self.session.add(group)
 			self.session.commit()
 			return
-		except sqlalchemy.orm.exc.MultipleResultsFound:
+		except MultipleResultsFound:
 			# more than one record found
 			raise Exception("More than one %s group found!" % groupName)
 		# found one existing record
 		raise Exception("%s group already exist" % groupName)
 
-	def newGroupByNames(self, groupName, nameList, scanNum, desc = None, accumulateScan = False):
+	def newGroupByNames_forMRI(self, groupName, nameList, scanNum, desc = None, accumulateScan = False):
 		"""
-		Initialize a group by a list of names. The scans are generated automatically.
+		Initialize a group by a list of names. The mriscans are generated automatically.
 		scanNum - which scan (first/second/etc)
-		accumulateScan - whether keep former scans in this group
+		accumulateScan - whether keep former mriscans in this group
 		"""
 		group = tables.Group(name = groupName, description = desc)
 		try:
 			self.session.query(tables.Group).filter_by(name = groupName).one()
-		except sqlalchemy.orm.exc.NoResultFound:
+		except NoResultFound:
 			for name in nameList:
 				db_person = self.session.query(tables.Person).filter_by(name = name).one()
 				group.people.append(db_person)
 				if accumulateScan:
-					group.scans += sorted(db_person.mriscans, key = lambda x: x.filename)[:scanNum]
+					group.mriscans += sorted(db_person.mriscans, key = lambda x: x.filename)[:scanNum]
 				else:
-					group.scans.append(sorted(db_person.mriscans, key = lambda x: x.filename)[scanNum - 1])
+					group.mriscans.append(sorted(db_person.mriscans, key = lambda x: x.filename)[scanNum - 1])
 			self.session.add(group)
 			self.session.commit()
 			return
-		except sqlalchemy.orm.exc.MultipleResultsFound:
+		except MultipleResultsFound:
 			# more than one record found
 			raise Exception("More than one %s group found!" % groupName)
 		# found one existing record
 		raise Exception("%s group already exist" % groupName)
 
-	def newGroupByNamesAndScans(self, groupName, nameList, scanList, desc = None):
+	def newGroupByNamesAndScans_forMRI(self, groupName, nameList, scanList, desc = None):
 		"""
 		Initialize a group by giving both name and scans
 		"""
@@ -310,9 +383,31 @@ class SQLiteDB:
 			group.people.append(db_person)
 		for scan in scanList:
 			db_scan = self.session.query(tables.MRIScan).filter_by(filename = scan).one()
-			group.scans.append(db_scan)
+			group.mriscans.append(db_scan)
 		self.session.add(group)
-		self.commit()
+		self.session.commit()
+
+	def newGroupByID_forEEG(self, groupName, scanList, desc = None):
+		"""
+		Initialize a group by a list of mriscans
+		"""
+		group = tables.Group(name = groupName, description = desc)
+		# check if group already exist
+		try:
+			self.session.query(tables.Group).filter_by(name = groupName).one()
+		except NoResultFound:
+			# alright
+			for scan in scanList:
+				db_scan = self.session.query(tables.EEGScan).filter_by(examid = scan).one()
+				group.eegscans.append(db_scan)
+			self.session.add(group)
+			self.session.commit()
+			return
+		except MultipleResultsFound:
+			# more than one record found
+			raise Exception("More than one %s group found!" % groupName)
+		# found one existing record
+		raise Exception("%s group already exist" % groupName)
 
 	def deleteGroupByName(self, groupName):
 		groupList = self.session.query(tables.Group).filter_by(name = groupName).all()
@@ -330,7 +425,7 @@ class SQLiteDB:
 			personIDs.append(person.id)
 		return personIDs
 
-	def get_all_scans_of_person(self, person_name):
+	def get_all_mriscans_of_person(self, person_name):
 		session = self.new_session()
 		one_person = session.query(tables.Person).filter_by(name = person_name).one()
 		return session.query(tables.MRIScan).filter_by(person_id = one_person.id)
