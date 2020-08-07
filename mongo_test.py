@@ -107,21 +107,20 @@ def generate_dynamic_database_networks(dynamic_rootfolder, data_source='Changgun
     atlas_name = 'brodmann_lrce'
     atlasobj = atlas.get(atlas_name)
     for mriscan in mriscans:
-        for atlas_name in DynamicAtlas:
-            for dynamic_conf in DynamiConf:
-                try:
-                    net = loader.load_single_dynamic_network(
-                        mriscan, atlasobj, dynamic_conf, dynamic_rootfolder)
-                    database.save_dynamic_network(net)
-                except OSError:
-                    print('! Not found! scan: %s atlas: %s' %
-                          (mriscan, atlas_name))
-                except MDB.MultipleRecordException:
-                    print('! Multiple found! scan: %s atlas:%s' %
-                          (mriscan, atlas_name))
+        for dynamic_conf in DynamiConf:
+            try:
+                net = loader.load_single_dynamic_network(
+                    mriscan, atlasobj, dynamic_conf, dynamic_rootfolder)
+                database.save_dynamic_network(net)
+            except OSError:
+                print('! Not found! scan: %s atlas: %s' %
+                      (mriscan, atlas_name))
+            except MDB.MultipleRecordException:
+                print('! Multiple found! scan: %s atlas:%s' %
+                      (mriscan, atlas_name))
 
 
-def generate_EEG_database(rootfolder, data_source='Changung'):
+def generate_EEG_database(rootfolder, data_source='Changgung'):
     mdb = MDB.MongoDBDatabase(data_source)
     mriscans = os.listdir(rootfolder)
     for mriscan in mriscans:
@@ -133,7 +132,7 @@ def generate_EEG_database(rootfolder, data_source='Changung'):
             try:
                 mdb.save_mat_dict(mriscan, mat, datadict)
             except MDB.MultipleRecordException:
-                print('! Mutiple record found scan: %s, mat: %s ' %
+                print('! Mutiple record found ! scan: %s, mat: %s' %
                       (mriscan, mat))
 
 
@@ -297,9 +296,9 @@ def DynamicNetTest(rootfolder, data_source='Changgung'):
     print("query count", QueryCount)
 
 
-def test_load_dynamic_networks(dynamic_rootfolder, data_source='MSA'):
-
-    test_load_dynamic_networks('D:/Research/MSA/Features', data_source = 'MSA')
+def test_load_dynamic_networks(dynamic_rootfolder, data_source='Changgung'):
+    """
+    """
     database = MDB.MongoDBDatabase(data_source)
     mriscans = os.listdir(dynamic_rootfolder)
     atlas_name = 'brodmann_lrce'
@@ -308,7 +307,7 @@ def test_load_dynamic_networks(dynamic_rootfolder, data_source='MSA'):
     for mriscan in mriscans:
         try:
             net = loader.load_single_dynamic_network(
-                mriscan, atlasobj, (100, 3), dynamic_rootfolder)
+                mriscan, atlasobj, (22, 1), dynamic_rootfolder)
         except OSError:
             print('! not found! scan: %s  not found!' % (mriscan))
     query_end = time.time()
@@ -316,7 +315,7 @@ def test_load_dynamic_networks(dynamic_rootfolder, data_source='MSA'):
     query_start = time.time()
     for mriscan in mriscans:
         try:
-            net = database.get_dynamic_net(mriscan, atlasobj.name, 100, 3)
+            net = database.get_dynamic_net(mriscan, atlasobj.name, 22, 1)
         except MDB.NoRecordFoundException:
             print('! not found! scan: %s  not found!' % (mriscan))
     query_end = time.time()
@@ -325,4 +324,10 @@ def test_load_dynamic_networks(dynamic_rootfolder, data_source='MSA'):
 
 if __name__ == '__main__':
     dynamic_rootfolder = "C:\\Users\\THU-EE-WL\\Downloads\\MSA Dynamic Features"
-    mdb = MDB.MongoDBDatabase('Changgung')
+    rootfolder = "C:\\Users\\THU-EE-WL\\Desktop\\EEG"
+    """
+    generate_EEG_database(rootfolder)
+    generate_dynamic_database_attrs(dynamic_rootfolder)
+    generate_dynamic_database_networks(dynamic_rootfolder)
+    """
+    test_load_dynamic_networks(dynamic_rootfolder)

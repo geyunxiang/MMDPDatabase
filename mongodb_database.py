@@ -37,6 +37,7 @@ import time
 import json
 import logging
 import scipy.io as scio
+import numpy as np
 
 from pymongo import monitoring
 from mmdps.proc import atlas, netattr
@@ -61,13 +62,11 @@ class MongoDBDatabase:
         if user == None and pwd == None:
             self.client = pymongo.MongoClient(host, port)
         else:
-            uri = "mongodb://" + user + ":" + pwd + \
-                "@" + host + ":" + str(port)
+            uri = 'mongodb://%s:%s@%s:%s' % (user, pwd, host, str(port))
             if dbname != None:
                 uri = uri+"/" + dbname
             self.client = pymongo.MongoClient(uri)
         print(self.client)
-
         with open("EEG_conf.json", 'r') as f:
             self.EEG_conf = json.loads(f.read())
         self.data_source = data_source
@@ -94,8 +93,10 @@ class MongoDBDatabase:
         "And you can extend with this"
         if mode == 'static':
             self.col = self.db['features']
-        elif mode == 'dynamic':
-            self.col = self.db['dynamic_data']
+        elif mode == 'dynamic1':
+            self.col = self.db['dynamic_attr']
+        elif mode == 'dynamic2':
+            self.col = self.db['dynamic_net']
         else:
             print("please input correct mode")
         return self.col
@@ -106,7 +107,7 @@ class MongoDBDatabase:
         if mode == 'static':
             query = dict(data_source=self.data_source, scan=scan,
                          atlas=atlas_name, feature=feature, dynamic=0, comment=comment)
-        elif mode == 'dynamic':
+        elif mode == 'dynamic1' or mode == 'dynamic2' or mode == 'dynamic':
             query = dict(data_source=self.data_source, scan=scan, atlas=atlas_name, feature=feature,
                          dynamic=1, window_length=window_length, step_size=step_size, comment=comment)
         return query
@@ -129,6 +130,12 @@ class MongoDBDatabase:
         dic.pop('__globals__')
         return dic
 
+    def find(self, db, col, query):
+        """ Gereral query"""
+        db = self.client[db]
+        col = db[col]
+        return col.find(query)
+
     def quick_query(self, mode, scan):
         """Query only with scan """
         return self.getCol(mode).find(dict(scan=scan))
@@ -143,7 +150,7 @@ class MongoDBDatabase:
         if mode == 'dynamic':
             return self.getCol(mode).find(query).sort("slice_num", 1)
         elif mode == 'static':
-             return self.getCol(mode).find(query)
+            return self.getCol(mode).find(query)
 
     def exist_query(self, mode, scan, atlas_name, feature, comment={}, window_length=None, step_size=None):
         """ Check a record if exist """
@@ -170,16 +177,21 @@ class MongoDBDatabase:
         self.db['features'].insert_one(document)
 
     def remove_static_feature(self, scan, atlas_name, feature, comment={}):
-        query = self.total_query('static', scan, atlas_name, feature, comment)
+        query = dict(scan=scan, atlas=atlas_name,
+                     feature=feature, comment=comment)
         self.db['features'].find_one_and_delete(query)
 
     def save_dynamic_attr(self, attr, comment={}):
         """
         Attr is a netattr.DynamicAttr instance
         """
-        if self.exist_query('dynamic', attr.scan, attr.atlasobj.name, attr.feature_name, comment, attr.window_length, attr.step_size) != None:
-            raise MultipleRecordException(attr.scan, 'Please check again.')
+        query = self.get_query('dynamic', attr.scan, attr.atlasobj.name,
+                               attr.feature_name, comment, attr.window_length, attr.step_size)
         for idx in range(attr.data.shape[1]):
+            query['slice_num'] = idx
+            if self.db['dynamic_attr'].find_one(query) != None:
+                raise MultipleRecordException(
+                    attr.scan, 'Please check again.')
             value = pickle.dumps(attr.data[:, idx])
             slice_num = idx
             document = self.get_document(
@@ -191,22 +203,24 @@ class MongoDBDatabase:
         Fiter and delete all the slice in dynamic_attr
         Default atlas is brodmann_lrce
         """
-        query = self.total_query(
-            'dynamic', scan, atlas_name, feature, comment, window_length, step_size)
-        self.db['dynamic_data'].delete_many(query)
+        query = dict(scan=scan, atlas=atlas_name, feature=feature,
+                     comment=comment, window_length=window_length, step_size=step_size)
+        self.db['dynamic_attr'].delete_many(query)
 
     def save_dynamic_network(self, net, comment={}):
-        """
-        Net is a netattr.DynamicNet instance
-        """
-        if self.exist_query('dynamic', net.scan, net.atlasobj.name, net.feature_name, comment, net.window_length, net.step_size) != None:
-            raise MultipleRecordException(net.scan, 'Please check again.')
+        """ Net is a netattr.DynamicNet instance """
+        query = self.get_query('dynamic', net.scan, net.atlasobj.name,
+                               net.feature_name, comment, net.window_length, net.step_size)
         for idx in range(net.data.shape[2]):
-            value = pickle.dumps(net.data[:, :, idx])
-            slice_num = idx
-            document = self.get_document(
-                'dynamic', net.scan, net.atlasobj.name, net.feature_name, value, comment, net.window_length, net.step_size, slice_num)
-            self.db['dynamic_net'].insert_one(document)
+            query['slice_num'] = idx
+            if self.db['dynamic_net'].find_one(query) != None:
+                raise MultipleRecordException(net.scan, 'Please check again.')
+            else:
+                value = pickle.dumps(net.data[:, :, idx])
+                slice_num = idx
+                document = self.get_document(
+                    'dynamic', net.scan, net.atlasobj.name, net.feature_name, value, comment, net.window_length, net.step_size, slice_num)
+                self.db['dynamic_net'].insert_one(document)
 
     def remove_dynamic_network(self, scan, atlas_name, feature, window_length, step_size, comment={}):
         """
@@ -214,9 +228,9 @@ class MongoDBDatabase:
         Default atlas is bromann_lrce 
         Default feature is BOLD.net
         """
-        query = self.total_query(
-            'dynamic', scan, atlas_name, feature, comment, window_length, step_size)
-        self.db['dynamic_data'].delete_many(query)
+        query = dict(scan=scan, atlas=atlas_name, feature=feature,
+                     comment=comment, window_length=window_length, step_size=step_size)
+        self.db['dynamic_net'].delete_many(query)
 
     def save_mat_dict(self, scan, mat, datadict):
         """ mat : name of mat file"""
@@ -237,6 +251,27 @@ class MongoDBDatabase:
     def remove_mat_dict(self, scan, feature):
         query = dict(scan=scan, feature=feature)
         self.db['EEG'].delete_many(query)
+
+    def get_mat(self, scan, mat, field):
+        """ Get mat from mongo """
+        query = dict(scan=scan, feature=mat)
+        count = self.db['EEG'].count_documents(query)
+        if count == 0:
+            raise NoRecordFoundException((scan, mat))
+        elif count > 1:
+            raise MultipleRecordException((scan, mat))
+        else:
+            records = self.db['EEG'].find_one(query)
+            for record in records:
+                if field in record.keys():
+                    matname = '%s_%s.mat' % (mat, field)
+                    dic = {}
+                    dic[field] = pickle.loads(record[field])[0, 0]
+                    scio.savemat(matname, dic)
+                    return dic
+                else:
+                    print('%s not in %s' % (field, mat))
+                    return None
 
     def get_attr(self, scan, atlas_name, feature):
         """  Return to an attr object  directly """
@@ -290,7 +325,7 @@ class MongoDBDatabase:
                      window_length=window_length, step_size=step_size)
         collection = self.db['dynamic_net']
         if collection.find_one(query) == None:
-            raise NoRecordFoundException
+            raise NoRecordFoundException((scan, atlas, feature))
         else:
             records = collection.find(query).sort(
                 [('slice_num', pymongo.ASCENDING)])
