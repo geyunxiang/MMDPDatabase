@@ -299,7 +299,7 @@ def DynamicNetTest(rootfolder, data_source='Changgung'):
 def test_load_dynamic_attrs(dynamic_rootfolder, data_source='Changgung'):
     """
     """
-    database = MDB.MongoDBDatabase(data_source, 'localhost')
+    database = MDB.MongoDBDatabase(data_source)
     mriscans = os.listdir(dynamic_rootfolder)
     atlas_name = 'aal'
     attr_name = 'inter-region_bc'
@@ -316,7 +316,7 @@ def test_load_dynamic_attrs(dynamic_rootfolder, data_source='Changgung'):
     for mriscan in mriscans:
         try:
             attr = database.get_dynamic_attr(
-                mriscan, atlasobj.name, attr_name, 50, 1)
+                mriscan, atlas_name, 'BOLD.BC.inter', 50, 1)
         except MDB.NoRecordFoundException:
             print('! not found! scan: %s  not found!' % (mriscan))
     query_end = time.time()
