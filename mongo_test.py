@@ -296,6 +296,33 @@ def DynamicNetTest(rootfolder, data_source='Changgung'):
     print("query count", QueryCount)
 
 
+def test_load_dynamic_attrs(dynamic_rootfolder, data_source='Changgung'):
+    """
+    """
+    database = MDB.MongoDBDatabase(data_source, 'localhost')
+    mriscans = os.listdir(dynamic_rootfolder)
+    atlas_name = 'aal'
+    attr_name = 'inter-region_bc'
+    atlasobj = atlas.get(atlas_name)
+    query_start = time.time()
+    try:
+        attr = loader.load_dynamic_attr(
+            mriscans, atlasobj, attr_name, (50, 1), dynamic_rootfolder)
+    except OSError:
+        print('! not found! scan: %s  not found!' % (attr_name))
+    query_end = time.time()
+    print('Loader query time: %1.3fs' % (query_end - query_start))
+    query_start = time.time()
+    for mriscan in mriscans:
+        try:
+            attr = database.get_dynamic_attr(
+                mriscan, atlasobj.name, attr_name, 50, 1)
+        except MDB.NoRecordFoundException:
+            print('! not found! scan: %s  not found!' % (mriscan))
+    query_end = time.time()
+    print('Mongo query time: %1.3fs' % (query_end - query_start))
+
+
 def test_load_dynamic_networks(dynamic_rootfolder, data_source='Changgung'):
     """
     """
@@ -329,5 +356,8 @@ if __name__ == '__main__':
     generate_EEG_database(rootfolder)
     generate_dynamic_database_attrs(dynamic_rootfolder)
     generate_dynamic_database_networks(dynamic_rootfolder)
+    mdb = MDB.MongoDBDatabase('Changgung')
+    mdb.get_mat('EEG_feature_examples', 'Freq', 'Freq')
+    test_load_dynamic_networks(dynamic_rootfolder, 'Changgung')
     """
-    test_load_dynamic_networks(dynamic_rootfolder)
+    test_load_dynamic_attrs(dynamic_rootfolder)
