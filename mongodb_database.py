@@ -66,9 +66,8 @@ class MongoDBDatabase:
             if dbname != None:
                 uri = uri+"/" + dbname
             self.client = pymongo.MongoClient(uri)
-        print(self.client)
-        with open("EEG_conf.json", 'r') as f:
-            self.EEG_conf = json.loads(f.read())
+        #with open("EEG_conf.json", 'r') as f:
+        #    self.EEG_conf = json.loads(f.read())
         self.data_source = data_source
         self.db = self.client[data_source]
         self.col = self.db['features']
@@ -148,7 +147,10 @@ class MongoDBDatabase:
         query = self.get_query(mode, scan, atlas_name,
                                feature, comment, window_length, step_size)
         if mode == 'dynamic':
-            return self.getCol(mode).find(query).sort("slice_num", 1)
+            if feature.find('net') == -1:
+                return self.getCol('dynamic1').find(query).sort("slice_num", 1)
+            else:
+                return self.getCol('dynamic2').find(query).sort("slice_num", 1)
         elif mode == 'static':
             return self.getCol(mode).find(query)
 
