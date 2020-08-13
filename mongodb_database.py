@@ -281,7 +281,7 @@ class MongoDBDatabase:
         elif count > 1:
             raise MultipleRecordException(scan)
         else:
-            AttrData = pickle.loads(collection.find(query)['value'])
+            AttrData = pickle.loads(collection.find(query)[0]['value'])
             atlasobj = atlas.get(atlas_name)
             attr = netattr.Attr(AttrData, atlasobj, scan, feature)
             return attr
@@ -303,7 +303,7 @@ class MongoDBDatabase:
                 attr.append_one_slice(pickle.loads(record['value']))
             return attr
 
-    def get_net(self, scan, atlas_name, feature):
+    def get_net(self, scan, atlas_name, feature = 'BOLD.net'):
         """  Return to an net object directly  """
         query = dict(scan=scan, atlas=atlas_name, feature=feature)
         count = self.db['features'].count_documents(query)
@@ -312,7 +312,7 @@ class MongoDBDatabase:
         elif count > 1:
             raise MultipleRecordException(scan)
         else:
-            NetData = pickle.loads(self.db['features'].find(query)['value'])
+            NetData = pickle.loads(self.db['features'].find(query)[0]['value'])
             atlasobj = atlas.get(atlas_name)
             net = netattr.Net(NetData, atlasobj, scan, feature)
             return net
