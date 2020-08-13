@@ -360,4 +360,4 @@ if __name__ == '__main__':
     mdb.get_mat('EEG_feature_examples', 'Freq', 'Freq')
     test_load_dynamic_networks(dynamic_rootfolder, 'Changgung')
     """
-    test_load_dynamic_attrs(dynamic_rootfolder)
+    test_load_dynamic_attrs(rootconfig.path.dynamic_feature_root)

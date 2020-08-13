@@ -31,15 +31,8 @@ dynamic document
 '''
 import pymongo
 import pickle
-import os
-import sys
-import time
-import json
-import logging
 import scipy.io as scio
-import numpy as np
 
-from pymongo import monitoring
 from mmdps.proc import atlas, netattr
 
 
@@ -284,9 +277,9 @@ class MongoDBDatabase:
         collection = self.db['features']
         count = collection.count_documents(query)
         if count == 0:
-            raise NoRecordFoundException
+            raise NoRecordFoundException(scan)
         elif count > 1:
-            raise MultipleRecordException
+            raise MultipleRecordException(scan)
         else:
             AttrData = pickle.loads(collection.find(query)['value'])
             atlasobj = atlas.get(atlas_name)
@@ -299,7 +292,7 @@ class MongoDBDatabase:
                      window_length=window_length, step_size=step_size)
         collection = self.db['dynamic_attr']
         if collection.find_one(query) == None:
-            raise NoRecordFoundException
+            raise NoRecordFoundException(scan)
         else:
             records = collection.find(
                 query).sort([('slice_num', pymongo.ASCENDING)])
@@ -315,9 +308,9 @@ class MongoDBDatabase:
         query = dict(scan=scan, atlas=atlas_name, feature=feature)
         count = self.db['features'].count_documents(query)
         if count == 0:
-            raise NoRecordFoundException
+            raise NoRecordFoundException(scan)
         elif count > 1:
-            raise MultipleRecordException
+            raise MultipleRecordException(scan)
         else:
             NetData = pickle.loads(self.db['features'].find(query)['value'])
             atlasobj = atlas.get(atlas_name)
