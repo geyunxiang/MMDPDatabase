@@ -1,0 +1,157 @@
+{
+    "BSI_dB.mat": {
+        "feature": "BSI_dB",
+        "fields": [
+            "dBSI",
+            "pdBSI",
+            "vBSI",
+            "rBSI"
+        ]
+    },
+    "BSI_uv.mat": {
+        "feature": "BSI_uv",
+        "fields": [
+            "dBSI",
+            "pdBSI",
+            "vBSI",
+            "rBSI"
+        ]
+    },
+    "chan_locs.mat": {
+        "feature": "chan_locs",
+        "fields": []
+    },
+    "chan_abspower_dB.mat": {
+        "feature": "chan_abspower_dB",
+        "fields": [
+            "deltapower",
+            "thetapower",
+            "alphapower",
+            "betapower",
+            "gammapower",
+            "allbandpower"
+        ]
+    },
+    "chan_abspower_uv.mat": {
+        "feature": "chan_abspower_uv",
+        "fields": [
+            "deltapower",
+            "thetapower",
+            "alphapower",
+            "betapower",
+            "gammapower"
+        ]
+    },
+    "chan_rltpower_dB.mat": {
+        "feature": "chan_rltpower_dB",
+        "fields": [
+            "deltapower",
+            "thetapower",
+            "alphapower",
+            "betapower",
+            "gammapower"
+        ]
+    },
+    "chan_rltpower_uv.mat": {
+        "feature": "chan_rltpower_uv",
+        "fields": [
+            "deltapower",
+            "thetapower",
+            "alphapower",
+            "betapower",
+            "gammapower"
+        ]
+    },
+    "coh.mat": {
+        "feature": "coh",
+        "fields": []
+    },
+    "Freq.mat": {
+        "feature": "Freq",
+        "fields": []
+    },
+    "freq_band.mat": {
+        "feature": "freq_band",
+        "fields": [
+            "delta",
+            "theta",
+            "alpha",
+            "beta",
+            "gamma",
+            "allband"
+        ]
+    },
+    "pli.mat": {
+        "feature": "pli",
+        "fields": []
+    },
+    "plv.mat": {
+        "feature": "plv",
+        "fields": []
+    },
+    "prep_info_select.mat": {
+        "feature": "prep_info_select",
+        "fields": [
+            "origin_length",
+            "select_length",
+            "final_length",
+            "bad_channel",
+            "epoch_origin_num",
+            "epoch_final_num",
+            "SASICA",
+            "IClabel",
+            "goodIcIdx",
+            "badIdx"
+        ]
+    },
+    "qEEG_dB.mat": {
+        "feature": "qEEG_dB",
+        "fields": [
+            "abspower",
+            "rltpower",
+            "ratio",
+            "dBSI",
+            "pdBSI",
+            "vBSI",
+            "rBSI"
+        ]
+    },
+    "qEEG_uv.mat": {
+        "feature": "qEEG_uv",
+        "fields": [
+            "abspower",
+            "rltpower",
+            "ratio",
+            "dBSI",
+            "pdBSI",
+            "vBSI",
+            "rBSI"
+        ]
+    },
+    "ratio_dB.mat": {
+        "feature": "ratio_dB",
+        "fields": [
+            "DAR",
+            "TBR",
+            "TAR",
+            "TABR",
+            "DTABR",
+            "Qslowing"
+        ]
+    },
+    "ratio_uv.mat": {
+        "feature": "ratio_uv",
+        "fields": [
+            "DAR",
+            "TBR",
+            "TAR",
+            "TABR",
+            "DTABR",
+            "Qslowing"
+        ]
+    },
+    "wpli.mat": {
+        "feature": "wpli",
+        "fields": []
+    }
+}
