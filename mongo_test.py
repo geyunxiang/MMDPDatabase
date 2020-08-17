@@ -231,7 +231,7 @@ def test_load_dynamic_attrs(dynamic_rootfolder = rootconfig.path.dynamic_feature
     query_start = time.time()
     try:
         attr = loader.load_dynamic_attr(
-            mriscans, atlasobj, attr_name, (50, 1), dynamic_rootfolder)
+            mriscans, atlasobj, attr_name, (22, 1), dynamic_rootfolder)
         load_counter += len(mriscans)
     except OSError:
         pass
@@ -244,7 +244,7 @@ def test_load_dynamic_attrs(dynamic_rootfolder = rootconfig.path.dynamic_feature
     for mriscan in mriscans:
         try:
             attr = database.get_dynamic_attr(
-                mriscan, atlas_name, 'BOLD.BC.inter', 50, 1)
+                mriscan, atlas_name, 'BOLD.BC.inter', 22, 1)
             load_counter += 1
         except MDB.NoRecordFoundException:
             pass
@@ -292,7 +292,9 @@ def test_load_dynamic_networks(dynamic_rootfolder = rootconfig.path.dynamic_feat
 if __name__ == '__main__':
     dynamic_rootfolder = "C:\\Users\\THU-EE-WL\\Downloads\\MSA Dynamic Features"
     rootfolder = "C:\\Users\\THU-EE-WL\\Desktop\\EEG"
-    # test_load_static_attrs()
-    # test_load_static_networks()
-    # test_load_dynamic_attrs()
-    test_load_dynamic_networks()
+    for num in range(4):
+        print('Round %d' % (num + 1))
+        # test_load_static_attrs()
+        # test_load_static_networks()
+        # test_load_dynamic_attrs()
+        test_load_dynamic_networks()
