@@ -4,10 +4,8 @@ MongoDB test script goes here.
 
 import os
 import time
-import pickle
 import json
 import mongodb_database as MDB
-import numpy as np
 
 from mmdps import rootconfig
 from mmdps.proc import atlas, loader
@@ -37,7 +35,7 @@ with open("EEG_conf.json", 'r') as f:
 def generate_static_database_attrs(data_source='Changgung'):
     """
     Generate MongoDB from scratch.
-    Scan a directory and move the directory to MongoDB
+    Scan rootconfig.path.feature_root and move the directory to MongoDB
     """
     mdb = MDB.MongoDBDatabase(data_source)
     mriscans = os.listdir(rootconfig.path.feature_root)
@@ -62,7 +60,7 @@ def generate_static_database_attrs(data_source='Changgung'):
 def generate_static_database_networks(data_source='Changgung'):
     """
     Generate MongoDB from scratch.
-    Scan a directory and move the directory to MongoDB
+    Scan rootconfig.path.feature_root and move the directory to MongoDB
     """
     mdb = MDB.MongoDBDatabase(data_source)
     mriscans = os.listdir(rootconfig.path.feature_root)
@@ -136,24 +134,16 @@ def generate_EEG_database(rootfolder, data_source='Changgung'):
                       (mriscan, mat))
 
 
-def main():
-    mdb = MDB.MongoDBDatabase(None)
-    mat = np.array([[1, 2, 3], [4, 5, 6]])
-    # mdb.remove_temp_data('test')
-    # mdb.put_temp_data(mat, 'test')
-
-    res = mdb.get_temp_data('test')
-    print(res)
-
-
-def test_load_feature(data_source='Changgung'):
+def test_load_static_attrs(feature_root = rootconfig.path.feature_root, data_source='Changgung'):
     """
-    Test time usage of mongo and loader
-    This function will check the folder's completeness
+    Test query time of loader and mongo when loading static attrs
+    All scans x atlas x attrs are loaded
     """
-    MongoTime = LoaderTime = 0
     mdb = MDB.MongoDBDatabase(data_source)
-    mriscans = os.listdir(rootconfig.path.feature_root)
+    mriscans = list(os.listdir(feature_root))
+
+    load_counter = 0
+    query_start = time.time()
     for mriscan in mriscans:
         for atlas_name in atlas_list:
             atlasobj = atlas.get(atlas_name)
@@ -161,173 +151,150 @@ def test_load_feature(data_source='Changgung'):
                 if attr_name.find('net') != -1:
                     continue
                 try:
-                    loader_start = time.time()
                     attr = loader.load_attrs([mriscan], atlasobj, attr_name)
-                    loader_end = time.time()
-                    LoaderTime += loader_end-loader_start
-                    if mdb.exist_query('static', attr[0].scan, attr[0].atlasobj.name, attr[0].feature_name) != None:
-                        raise MDB.MultipleRecordException(
-                            attr[0].scan, 'Please check again.')
-                    doc = mdb.get_document(
-                        'static', attr[0].scan, attr[0].atlasobj.name, attr[0].feature_name, pickle.dumps(attr[0].data))
-                    mongo_start = time.time()
-                    mdb.db['features'].insert_one(doc)
-                    mongo_end = time.time()
-                    MongoTime += mongo_end-mongo_start
+                    load_counter += 1
                 except OSError:
-                    print('! not found! scan: %s, atlas: %s, attr: %s not found!' % (
-                        mriscan, atlas_name, attr_name))
-                except MDB.MultipleRecordException:
-                    print(
-                        '! Multiple record found ! scan: %s, atlas: %s, attr: %s' % (
-                            mriscan, atlas_name, attr_name))
-    print(LoaderTime)
-    print(MongoTime)
+                    pass
+                    # print('! not found! scan: %s, atlas: %s, attr: %s not found!' % (mriscan, atlas_name, attr_name))
+    query_end = time.time()
+    query_time = query_end - query_start
+    print('Query %d static attrs (netattr.Attr) using loader time cost: %1.2fs' % (load_counter, query_time))
 
-
-def check_all_feature(rootfolder, data_source='Changgung'):
-    """
-    Check all feature in rootfolder whether exist in mongo
-    Get total query time and query speed
-    """
-    mdb = MDB.MongoDBDatabase(data_source)
-    mriscans = os.listdir(rootfolder)
-    query_total_num = query_find_num = 0
-    query_time = 0
+    load_counter = 0
+    query_start = time.time()
     for mriscan in mriscans:
-        for atlasname in atlas_list:
-            for attrname in attr_list:
-                query = dict(scan=mriscan, atlas=atlasname, feature=attrname)
-                query_start = time.time()
-                count = mdb.db['features'].count_documents(query)
-                query_end = time.time()
-                if count == 0:
-                    print(mriscan, atlasname, attrname, "No record")
-                elif count > 1:
-                    print(mriscan, atlasname, attrname, "Repeated record")
-                else:
-                    print(mriscan, atlasname, attrname, "Normal record")
-                    query_find_num += 1
-                query_total_num += 1
-                query_time += query_end-query_start
-    print('Query Total Number', query_total_num)
-    print("Query Find  Number", query_find_num)
-    print('Query Time', query_time)
-
-
-def LoadDynamicAttrTest(rootfolder, data_source='Changgung'):
-    loadertime = 0
-    mriscans = os.listdir(rootfolder)
-    for atlas_name in DynamicAtlas:
-        atlasobj = atlas.get(atlas_name)
-        for attrname in dynamic_attr_list:
-            for dynamic_conf in DynamiConf:
+        for atlas_name in atlas_list:
+            for attr_name in attr_list:
+                if attr_name.find('net') != -1:
+                    continue
                 try:
-                    loadstart = time.time()
-                    loader.load_dynamic_attr(
-                        mriscans, atlasobj, attrname, dynamic_conf, rootfolder)
-                    loadend = time.time()
-                except OSError:
-                    print('oserror')
-                loadertime += loadend - loadstart
-    print("Loader Time ", loadertime)
-
-
-def LoadDynamicNetTest(rootfolder, data_source='Changgung'):
-    loadertime = 0
-    mriscans = os.listdir(rootfolder)
-    for mriscan in mriscans:
-        for atlas_name in DynamicAtlas:
-            atlasobj = atlas.get(atlas_name)
-            for dynamic_conf in DynamiConf:
-                try:
-                    loadstart = time.time()
-                    loader.load_single_dynamic_network(
-                        mriscan, atlasobj, dynamic_conf, rootfolder)
-                    loadend = time.time()
-                except OSError:
-                    print('oserror')
-                loadertime += loadend-loadstart
-    print("Loader Time ", loadertime)
-
-
-def DynamicAttrTest(rootfolder, data_source='Changgung'):
-    """ Query and return dynamic attr object test"""
-    mdb = MDB.MongoDBDatabase(data_source)
-    QueryTime = QueryCount = 0
-    mriscans = os.listdir(rootfolder)
-    for mriscan in mriscans:
-        for atlas_name in DynamicAtlas:
-            for dynamic_conf in DynamiConf:
-                for attrname in dynamic_attr_list:
-                    try:
-                        query_start = time.time()
-                        mdb.get_dynamic_attr(
-                            mriscan, atlas_name, attrname, dynamic_conf[0], dynamic_conf[1])
-                        query_end = time.time()
-                        QueryTime += query_end - query_start
-                        QueryCount += 1
-                    except MDB.NoRecordFoundException:
-                        print('! Not found! scan: %s, atlas: %s, attr: %s' %
-                              (mriscan, atlas_name, attrname))
-    print("query time", QueryTime)
-    print("query count", QueryCount)
-
-
-def DynamicNetTest(rootfolder, data_source='Changgung'):
-    """ Query and return dynamic net object test"""
-    mdb = MDB.MongoDBDatabase(data_source)
-    QueryTime = QueryCount = 0
-    mriscans = os.listdir(rootfolder)
-    for mriscan in mriscans:
-        for atlas_name in DynamicAtlas:
-            for dynamic_conf in DynamiConf:
-                try:
-                    query_start = time.time()
-                    mdb.get_dynamic_net(
-                        mriscan, atlas_name, dynamic_conf[0], dynamic_conf[1])
-                    query_end = time.time()
-                    QueryTime += query_end - query_start
-                    QueryCount += 1
+                    attr = mdb.get_attr(mriscan, atlas_name, attr_name)
+                    load_counter += 1
                 except MDB.NoRecordFoundException:
-                    print('! Not found! scan: %s, atlas: %s' %
-                          (mriscan, atlas_name))
-    print("query time", QueryTime)
-    print("query count", QueryCount)
+                    pass
+                    # print('! not found! scan: %s, atlas: %s, attr: %s not found!' % (mriscan, atlas_name, attr_name))
+    query_end = time.time()
+    query_time = query_end - query_start
+    print('Query %d static attrs (netattr.Attr) using MongoDB time cost: %1.2fs' % (load_counter, query_time))    
 
 
-def test_load_dynamic_networks(dynamic_rootfolder, data_source='Changgung'):
+def test_load_static_networks(feature_root = rootconfig.path.feature_root, data_source='Changgung'):
     """
+    Test query time of loader and mongo when loading static networks
+    All scans x atlas are loaded
+    """
+    mdb = MDB.MongoDBDatabase(data_source)
+    mriscans = list(os.listdir(feature_root))
+
+    load_counter = 0
+    query_start = time.time()
+    for mriscan in mriscans:
+        for atlas_name in atlas_list:
+            atlasobj = atlas.get(atlas_name)
+            try:
+                net = loader.load_single_network(mriscan, atlasobj)
+                load_counter += 1
+            except OSError:
+                pass
+                # print('! not found! scan: %s, atlas: %s, network not found!' % (mriscan, atlas_name))
+    query_end = time.time()
+    query_time = query_end - query_start
+    print('Query %d static networks (netattr.Net) using loader time cost: %1.2fs' % (load_counter, query_time))
+
+    load_counter = 0
+    query_start = time.time()
+    for mriscan in mriscans:
+        for atlas_name in atlas_list:
+            try:
+                net = mdb.get_net(mriscan, atlas_name)
+                load_counter += 1
+            except MDB.NoRecordFoundException:
+                pass
+                # print('! not found! scan: %s, atlas: %s, network not found!' % (mriscan, atlas_name))
+    query_end = time.time()
+    query_time = query_end - query_start
+    print('Query %d static networks (netattr.Net) using MongoDB time cost: %1.2fs' % (load_counter, query_time))  
+
+
+def test_load_dynamic_attrs(dynamic_rootfolder = rootconfig.path.dynamic_feature_root, data_source='MSA'):
+    """
+    Test query time of loader and mongo when loading dynamic attrs
+    All scans of a specific atlas and attr are loaded
     """
     database = MDB.MongoDBDatabase(data_source)
-    mriscans = os.listdir(dynamic_rootfolder)
+    mriscans = list(os.listdir(dynamic_rootfolder))
+    atlas_name = 'brodmann_lrce'
+    attr_name = 'inter-region_bc'
+    atlasobj = atlas.get(atlas_name)
+
+    load_counter = 0
+    query_start = time.time()
+    try:
+        attr = loader.load_dynamic_attr(
+            mriscans, atlasobj, attr_name, (22, 1), dynamic_rootfolder)
+        load_counter += len(mriscans)
+    except OSError:
+        pass
+        # print('! not found! scan: %s  not found!' % (attr_name))
+    query_end = time.time()
+    print('Query %d dynamic attrs (netattr.DynamicAttr) using loader time cost: %1.2fs' % (load_counter, query_end - query_start))
+
+    load_counter = 0
+    query_start = time.time()
+    for mriscan in mriscans:
+        try:
+            attr = database.get_dynamic_attr(
+                mriscan, atlas_name, 'BOLD.BC.inter', 22, 1)
+            load_counter += 1
+        except MDB.NoRecordFoundException:
+            pass
+            # print('! not found! scan: %s  not found!' % (mriscan))
+    query_end = time.time()
+    print('Query %d dynamic attrs (netattr.DynamicAttr) using MongoDB time cost: %1.2fs' % (load_counter, query_end - query_start))
+
+
+def test_load_dynamic_networks(dynamic_rootfolder = rootconfig.path.dynamic_feature_root, data_source='MSA'):
+    """
+    Test query time of loader and mongo when loading dynamic networks
+    All scans of a specific atlas are loaded
+    """
+    database = MDB.MongoDBDatabase(data_source)
+    mriscans = list(os.listdir(dynamic_rootfolder))
     atlas_name = 'brodmann_lrce'
     atlasobj = atlas.get(atlas_name)
+
+    load_counter = 0
     query_start = time.time()
     for mriscan in mriscans:
         try:
             net = loader.load_single_dynamic_network(
                 mriscan, atlasobj, (22, 1), dynamic_rootfolder)
+            load_counter += 1
         except OSError:
-            print('! not found! scan: %s  not found!' % (mriscan))
+            pass
+            # print('! not found! scan: %s  not found!' % (mriscan))
     query_end = time.time()
-    print('Loader query time: %1.3fs' % (query_end - query_start))
+    print('Query %d dynamic networks (netattr.DynamicNet) using loader time cost: %1.2fs' % (load_counter, query_end - query_start))
+
+    load_counter = 0
     query_start = time.time()
     for mriscan in mriscans:
         try:
             net = database.get_dynamic_net(mriscan, atlasobj.name, 22, 1)
+            load_counter += 1
         except MDB.NoRecordFoundException:
-            print('! not found! scan: %s  not found!' % (mriscan))
+            pass
+            # print('! not found! scan: %s  not found!' % (mriscan))
     query_end = time.time()
-    print('Mongo query time: %1.3fs' % (query_end - query_start))
+    print('Query %d dynamic networks (netattr.DynamicNet) using MongoDB time cost: %1.2fs' % (load_counter, query_end - query_start))
 
 
 if __name__ == '__main__':
     dynamic_rootfolder = "C:\\Users\\THU-EE-WL\\Downloads\\MSA Dynamic Features"
     rootfolder = "C:\\Users\\THU-EE-WL\\Desktop\\EEG"
-    """
-    generate_EEG_database(rootfolder)
-    generate_dynamic_database_attrs(dynamic_rootfolder)
-    generate_dynamic_database_networks(dynamic_rootfolder)
-    """
-    test_load_dynamic_networks(dynamic_rootfolder)
+    for num in range(4):
+        print('Round %d' % (num + 1))
+        # test_load_static_attrs()
+        # test_load_static_networks()
+        # test_load_dynamic_attrs()
+        test_load_dynamic_networks()
