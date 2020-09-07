@@ -213,10 +213,10 @@ class SQLiteDB:
 		db_mriscan = tables.MRIScan(date = dateobj, hasT1 = hasT1, hasT2 = hasT2, hasBOLD = hasBOLD, hasDWI = hasDWI, filename = scan)
 		machine.mriscans.append(db_mriscan)
 		try:
-			ret = self.session.query(exists().where(and_(tables.Person.name == name, tables.Person.patientid == scan_info['Patient']['ID']))).scalar()
+			ret = self.session.query(exists().where(and_(tables.Person.name_pinyin == name, tables.Person.patientid == scan_info['Patient']['ID']))).scalar()
 			if ret:
 				self.session.add(db_mriscan)
-				person = self.session.query(tables.Person).filter_by(name = name).one()
+				person = self.session.query(tables.Person).filter_by(name_pinyin = name).one()
 				person.mriscans.append(db_mriscan)
 				self.session.commit()
 				print('Old patient new scan %s inserted' % scan)

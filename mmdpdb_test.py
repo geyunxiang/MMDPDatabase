@@ -1,7 +1,7 @@
 import numpy as np
 import mmdpdb, mongodb_database, redis_database
 import time,pickle
-import os
+import os, json
 from mmdps import rootconfig
 from mmdps.proc import atlas, loader
 
@@ -240,6 +240,11 @@ def DynamicNet():
 	print("MMDPDynamicNet: ", MMDPTime)
 	print("RedisDynamicNet: ", RedisTime)
 
+def sqltest():
+	a = mmdpdb.SQLiteDB('mmdpdb.db')
+	with open('recordInformation.json', encoding='utf8') as f:
+		json_data = json.load(f)
+		a.insert_eegrow(json_data)
 
 if __name__ == '__main__':
 	#LoadAttrNetTest_AttrNetTest()
@@ -247,6 +252,7 @@ if __name__ == '__main__':
 	#LoadDynamicNetTest()
 	#DynamicAttrTest()
 	#DynamicNetTest()
-	MMDPDBAttrTest_RedisAttrTest()
-	DynamicAttr()
-	DynamicNet()
+	#MMDPDBAttrTest_RedisAttrTest()
+	#DynamicAttr()
+	#DynamicNet()
+	sqltest()

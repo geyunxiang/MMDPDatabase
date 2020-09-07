@@ -74,39 +74,29 @@ class RedisDatabase:
 			to set a new entry in Redis.
 		"""
 		if type(obj) is dict:
-			if 'comment' in obj:
-				key = self.generate_static_key(data_source, obj['scan'], obj['atlas'], obj['feature'], obj['comment'])
-			else:
-				key = self.generate_static_key(data_source, obj['scan'], obj['atlas'], obj['feature'], {})
+			key = self.generate_static_key(data_source, obj['scan'], obj['atlas'], obj['feature'], obj['comment'])
 			self.datadb.set(key, obj['value'], ex=1800)
-			return self.trans_netattr(obj['scan'], obj['atlas'], obj['feature'], pickle.loads(obj['value']))
 		elif type(obj) is pymongo.cursor.Cursor:
-			value = []
 			scan = obj[0]['scan']
 			atlas = obj[0]['atlas']
 			feature = obj[0]['feature']
 			window_length = obj[0]['window_length']
 			step_size = obj[0]['step_size']
-			if 'comment' in obj[0]:
-				comment = obj[0]['comment']
-			else:
-				comment = {}
+			comment = obj[0]['comment']
 			key_all = self.generate_dynamic_key(data_source, scan, atlas, feature, window_length, step_size, comment)
 			pipe = self.datadb.pipeline()
 			length=obj.count()
 			try:
 				pipe.multi()
 				pipe.set(key_all + ':0', length, ex=1600)
-				for i in range(length):  # 使用查询关键字保证升序
+				for i in range(length):
 					pipe.set(key_all + ':' + str(i + 1), (obj[i]['value']), ex=1800)
-					value.append(pickle.loads(obj[i]['value']))
 				pipe.execute()
 			except Exception as e:
 				raise Exception('An error occur when tring to set value in redis, error message: ' + str(e))
-			return self.trans_dynamic_netattr(scan, atlas, feature, window_length, step_size, np.array(value))
 		elif type(obj) is netattr.Net or type(obj) is netattr.Attr:
 			key = self.generate_static_key(data_source, obj.scan, obj.atlasobj.name, obj.feature_name, {})
-			self.atadb.set(key, pickle.dumps(obj.data))
+			self.datadb.set(key, pickle.dumps(obj.data))
 		elif type(obj) is netattr.DynamicNet or type(obj) is netattr.DynamicAttr:
 			key_all = self.generate_dynamic_key(data_source, obj.scan, obj.atlasobj.name, obj.feature_name, obj.window_length, obj.step_size, {})
 			length=obj.data.shape[2]
