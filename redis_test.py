@@ -4,6 +4,7 @@ import numpy as np
 import json
 import pymongo
 import pickle
+from mmdps import rootconfig
 
 
 SCAN =['baihanxiang_20190307','caipinrong_20180412','baihanxiang_20190211','caochangsheng_20161027',
@@ -13,7 +14,6 @@ SCAN =['baihanxiang_20190307','caipinrong_20180412','baihanxiang_20190211','caoc
        'daihuachen_20170518','daishiqin_20180521','daishiqin_20180705',
        'daizhongxi_20181116','denghongbin_20181117','denghongbin_20181203','dingshuqin_20180802',
        'fengdaoliang_20160107','fengdaoliang_20160120','fuchenhao_20170602','fuchenhao_20170623']
-DTNAMIC_SCAN=['CMSA_01','CMSA_02','CMSA_03']
 ATLAS=['aal','aicha','bnatlas','brodmann_lr','brodmann_lrce']
 FEATURE=['bold_interBC','bold_interCCFS','bold_interLE','bold_interWD','bold_net']
 DTNAMIC_FEATURE=['inter-region_bc','inter-region_ccfs', 'inter-region_le', 'inter-region_wd']
@@ -37,6 +37,7 @@ def Inimongodb_dynamic():
     mydb = myclient['Changgung']
     mycol_attr = mydb['dynamic_attr']
     mycol_net = mydb['dynamic_net']
+    DTNAMIC_SCAN = list(os.listdir(rootconfig.path.dynamic_feature_root))
     for i in DTNAMIC_SCAN:
         for k in WINDOW_LENTH:
             for l in STEP_SIZE:
@@ -61,7 +62,7 @@ def Inimongodb_dynamic():
 
 
 if __name__ == '__main__':
-    #Inimongodb()
+    Inimongodb()
     Inimongodb_dynamic()
     pass
 

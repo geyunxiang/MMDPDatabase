@@ -10,7 +10,7 @@ mmdpdb is the database of MMDPS, containing 3 databased.
 	3. Redis is a high-speed cache that starts up upon request. 
 
 """
-import os
+import os , time
 
 from sqlalchemy import create_engine, exists, and_
 from sqlalchemy.orm import sessionmaker
@@ -26,6 +26,13 @@ from mmdps import rootconfig
 import mongodb_database, redis_database
 from Cryptodome.Cipher import AES
 from Cryptodome import Random
+
+static_rdb_get = 0
+static_rdb_set = 0
+static_mdb_get = 0
+dynamic_rdb_get = 0
+dynamic_rdb_set = 0
+dynamic_mdb_get = 0
 
 class AESCoding:
 	def __init__(self, tkey = b'this is a 16 key'):
@@ -62,6 +69,9 @@ class MMDPDatabase:
 		If the query succeeds, return a Net or Attr class, if not, rasie an arror.
 		"""
 		#wrong input check
+		global static_rdb_get
+		global static_rdb_set
+		global static_mdb_get
 		return_single = False
 		if type(scan_list) is str:
 			scan_list = [scan_list]
@@ -73,13 +83,20 @@ class MMDPDatabase:
 			raise Exception("Please input in the format as follows : scan must be str or a list of str, atlas and feature must be str")
 		ret_list = []
 		for scan in scan_list:
+			static_rdb_get -= time.time()
 			res = self.rdb.get_static_value(self.data_source, scan, atlasobj, feature_name, comment)
+			static_rdb_get += time.time()
 			if res is not None:
 				ret_list.append(res)
 			else:
+				static_mdb_get -= time.time()
 				doc = self.mdb.total_query('static', scan, atlasobj, feature_name, comment)
-				if doc is not None:
+				static_rdb_get += time.time()
+				doc = list(doc)
+				if len(doc) != 0:
+					static_rdb_set -= time.time()
 					ret_list.append(self.rdb.set_value(doc[0],self.data_source))
+					static_rdb_set += time.time()
 				else:
 					raise mongodb_database.NoRecordFoundException('No such item in redis and mongodb: ' + scan + ' ' + atlasobj + ' ' + feature_name)
 					# raise Exception('No such item in redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name)
@@ -96,6 +113,9 @@ class MMDPDatabase:
 		If the data is not in Redis, try to query data from Mongodb and store the data in Redis.
 		If the query succeeds, return a DynamicNet or DynamicAttr class, if not, rasie an arror.
 		"""
+		global dynamic_rdb_get
+		global dynamic_rdb_set
+		global dynamic_mdb_get
 		return_single = False
 		if type(scan_list) is str:
 			scan_list = [scan_list]
@@ -106,16 +126,25 @@ class MMDPDatabase:
 			raise Exception("Please input in the format as follows : scan must be str or a list of str, atlas and feature must be str, window length and step size must be int")
 		ret_list = []
 		for scan in scan_list:
+			dynamic_rdb_get -= time.time()
 			res = self.rdb.get_dynamic_value(self.data_source, scan, atlasobj, feature_name, window_length, step_size, comment)
+			dynamic_rdb_get += time.time()
 			if res is not None:
 				ret_list.append(res)
 			else:
 				if feature_name.find('BOLD.net') != -1:
+					dynamic_mdb_get -= time.time()
 					doc = self.mdb.total_query('dynamic2', scan, atlasobj, feature_name, comment, window_length, step_size)
+					dynamic_mdb_get += time.time()
 				else:
+					dynamic_mdb_get -= time.time()
 					doc = self.mdb.total_query('dynamic1', scan, atlasobj, feature_name, comment, window_length, step_size)
-				if doc is not None:
+					dynamic_mdb_get += time.time()
+				doc = list(doc)
+				if len(doc) != 0:
+					dynamic_rdb_set -= time.time()
 					mat = self.rdb.set_value(doc,self.data_source)
+					dynamic_rdb_set += time.time()
 					ret_list.append(mat)
 				else:
 					raise mongodb_database.NoRecordFoundException('No such item in redis or mongodb: ' + scan + ' ' + atlasobj + ' ' + feature_name + ' ' + str(window_length) + ' ' + str(step_size))

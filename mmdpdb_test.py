@@ -183,6 +183,9 @@ def MMDPDBStaticAttr(feature_root = rootconfig.path.feature_root):
 	query_end = time.time()
 	query_time = query_end - query_start
 	print('Query %d static attrs (netattr.Attr) using MMDPDatabase time cost: %1.2fs' % (load_counter, query_time))
+	print('Redis get cost: %.2f' % mmdpdb.static_rdb_get)
+	print('Redis set cost: %.2f' % mmdpdb.static_rdb_set)
+	print('Mongo get cost: %.2f' % mmdpdb.static_mdb_get)
 
 	load_counter = 0
 	query_start = time.time()
@@ -222,6 +225,9 @@ def MMDPDBStaticNet(feature_root = rootconfig.path.feature_root):
 	query_end = time.time()
 	query_time = query_end - query_start
 	print('Query %d static networks (netattr.Net) using MMDPDatabase time cost: %1.2fs' % (load_counter, query_time))
+	print('Redis get cost: %.2f' % mmdpdb.static_rdb_get)
+	print('Redis set cost: %.2f' % mmdpdb.static_rdb_set)
+	print('Mongo get cost: %.2f' % mmdpdb.static_mdb_get)
 
 	load_counter = 0
 	query_start = time.time()
@@ -242,10 +248,10 @@ def MMDPDBDynamicAttr(feature_root = rootconfig.path.dynamic_feature_root):
 	Test time usage of MMDPDatabase and Redis when loading dynamic attrs
 	"""
 	rdb = redis_database.RedisDatabase()
-	db = mmdpdb.MMDPDatabase('MSA')
+	db = mmdpdb.MMDPDatabase('Changgung')
 	mriscans = os.listdir(feature_root)
 	atlas_name = 'brodmann_lrce'
-	attr_name = 'BOLD.BC.inter'
+	attr_name = 'inter-region_bc'
 	dynamic_conf = (22, 1)
 
 	load_counter = 0
@@ -260,11 +266,14 @@ def MMDPDBDynamicAttr(feature_root = rootconfig.path.dynamic_feature_root):
 	query_end = time.time()
 	query_time = query_end - query_start
 	print('Query %d dynamic attrs (netattr.DynamicAttr) using MMDPDatabase time cost: %1.2fs' % (load_counter, query_time))
+	print('Redis get cost: %.2f' % mmdpdb.dynamic_rdb_get)
+	print('Redis set cost: %.2f' % mmdpdb.dynamic_rdb_set)
+	print('Mongo get cost: %.2f' % mmdpdb.dynamic_mdb_get)
 
 	load_counter = 0
 	query_start = time.time()
 	for mriscan in mriscans:
-		attr = rdb.get_dynamic_value('MSA', mriscan, atlas_name, attr_name, dynamic_conf[0], dynamic_conf[1])
+		attr = rdb.get_dynamic_value('Changgung', mriscan, atlas_name, attr_name, dynamic_conf[0], dynamic_conf[1])
 		if attr is None:
 			pass
 			# print('! not found! scan: %s, atlas: %s, attr: %s not found!' % (mriscan, atlas_name, attr_name))
@@ -279,7 +288,7 @@ def MMDPDBDynamicNet(feature_root = rootconfig.path.dynamic_feature_root):
 	Test time usage of MMDPDatabase and Redis when loading dynamic networks
 	"""
 	rdb = redis_database.RedisDatabase()
-	db = mmdpdb.MMDPDatabase('MSA')
+	db = mmdpdb.MMDPDatabase('Changgung')
 	mriscans = os.listdir(feature_root)
 	atlas_name = 'brodmann_lrce'
 	dynamic_conf = (22, 1)
@@ -295,11 +304,14 @@ def MMDPDBDynamicNet(feature_root = rootconfig.path.dynamic_feature_root):
 	query_end = time.time()
 	query_time = query_end - query_start
 	print('Query %d dynamic networks (netattr.DynamicNet) using MMDPDatabase time cost: %1.2fs' % (load_counter, query_time))
+	print('Redis get cost: %.2f' % mmdpdb.dynamic_rdb_get)
+	print('Redis set cost: %.2f' % mmdpdb.dynamic_rdb_set)
+	print('Mongo get cost: %.2f' % mmdpdb.dynamic_mdb_get)
 
 	load_counter = 0
 	query_start = time.time()
 	for mriscan in mriscans:
-		attr = rdb.get_dynamic_value('MSA', mriscan, atlas_name, 'BOLD.net', dynamic_conf[0], dynamic_conf[1])
+		attr = rdb.get_dynamic_value('Changgung', mriscan, atlas_name, 'BOLD.net', dynamic_conf[0], dynamic_conf[1])
 		if attr is None:
 			pass
 			# print('! not found! scan: %s, atlas: %s, networks not found!' % (mriscan, atlas_name))
@@ -315,9 +327,9 @@ if __name__ == '__main__':
 	# LoadDynamicNetTest()
 	# MongoDynamicAttrTest()
 	# MongoDynamicNetTest()
-	for num in range(4):
+	for num in range(2):
 		print('Round %d' %(num + 1))
 		# MMDPDBStaticAttr()
 		# MMDPDBStaticNet()
-		# MMDPDBDynamicAttr()
+		#MMDPDBDynamicAttr()
 		MMDPDBDynamicNet()
