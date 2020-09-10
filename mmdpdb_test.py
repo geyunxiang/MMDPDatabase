@@ -288,7 +288,7 @@ def MMDPDBDynamicNet(feature_root = rootconfig.path.dynamic_feature_root):
 	Test time usage of MMDPDatabase and Redis when loading dynamic networks
 	"""
 	rdb = redis_database.RedisDatabase()
-	db = mmdpdb.MMDPDatabase('Changgung')
+	db = mmdpdb.MMDPDatabase('MSA')
 	mriscans = os.listdir(feature_root)
 	atlas_name = 'brodmann_lrce'
 	dynamic_conf = (22, 1)
