@@ -1,7 +1,6 @@
 """
 MongoDB test script goes here.
 """
-
 import os
 import time
 import pickle
@@ -359,5 +358,11 @@ if __name__ == '__main__':
     mdb = MDB.MongoDBDatabase('Changgung')
     mdb.get_mat('EEG_feature_examples', 'Freq', 'Freq')
     test_load_dynamic_networks(dynamic_rootfolder, 'Changgung')
-    """
     test_load_dynamic_attrs(dynamic_rootfolder)
+    """
+    """
+    'test_load_dynamic_attrs(dynamic_rootfolder)
+    
+    test_load_dynamic_networks(dynamic_rootfolder, 'MSA')
+    """
+    
