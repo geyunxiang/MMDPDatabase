@@ -50,7 +50,7 @@ class MongoDBDatabase:
     :parame comment: 		    default {}
     """
 
-    def __init__(self, data_source, host='localhost', user=None, pwd=None, dbname=None, port=27017):
+    def __init__(self, data_source, host='101.6.70.6', user='mmdpdb', pwd='123.abc', dbname=None, port=27017):
         """ Connect to mongo server """
         if user is None and pwd is None:
             self.client = pymongo.MongoClient(host, port)
