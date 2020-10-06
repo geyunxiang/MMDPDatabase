@@ -145,6 +145,14 @@ class MongoDBDatabase:
         query = dict(scan=scan, comment=comment)
         self.dndb[col].delete_many(query)
 
+    def loadmat(self, path):
+        """ load mat, return data dict"""
+        dic = scio.loadmat(path)
+        dic.pop('__header__')
+        dic.pop('__version__')
+        dic.pop('__globals__')
+        return dic
+
     def save_mat_dict(self, scan, mat, datadict):
         """ mat: .mat file name """
         """ db:  self.EEG_db  col:feature """
