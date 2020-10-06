@@ -1,7 +1,6 @@
 """
 MongoDB test script goes here.
 """
-
 import os
 import time
 import json
@@ -298,3 +297,17 @@ if __name__ == '__main__':
         # test_load_static_networks()
         # test_load_dynamic_attrs()
         test_load_dynamic_networks()
+    """
+    generate_EEG_database(rootfolder)
+    generate_dynamic_database_attrs(dynamic_rootfolder)
+    generate_dynamic_database_networks(dynamic_rootfolder)
+    mdb = MDB.MongoDBDatabase('Changgung')
+    mdb.get_mat('EEG_feature_examples', 'Freq', 'Freq')
+    test_load_dynamic_networks(dynamic_rootfolder, 'Changgung')
+    test_load_dynamic_attrs(dynamic_rootfolder)
+    """
+    """
+    'test_load_dynamic_attrs(dynamic_rootfolder)
+    
+    test_load_dynamic_networks(dynamic_rootfolder, 'MSA')
+    """

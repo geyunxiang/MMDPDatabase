@@ -95,6 +95,9 @@ class MMDPDatabase:
 				doc = list(doc)
 				if len(doc) != 0:
 					static_rdb_set -= time.time()
+				# doc =self.mdb.total_query('SA',scan,atlasobj,feature_name,comment)
+				# doc =self.mdb,total_query('SN',scan,atlasobj,feature_name,comment)
+				if doc.count() != 0:
 					ret_list.append(self.rdb.set_value(doc[0],self.data_source))
 					static_rdb_set += time.time()
 				else:
@@ -132,6 +135,8 @@ class MMDPDatabase:
 			if res is not None:
 				ret_list.append(res)
 			else:
+				# doc = self.mdb.total_query('DA',scan, atlasobj, feature_name, comment, window_length, step_size)
+				# doc = self.mdb.total_query('DN',scan, atlasobj, feature_name, comment, window_length, step_size)
 				if feature_name.find('BOLD.net') != -1:
 					dynamic_mdb_get -= time.time()
 					doc = self.mdb.total_query('dynamic2', scan, atlasobj, feature_name, comment, window_length, step_size)
