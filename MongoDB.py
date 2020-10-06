@@ -72,7 +72,7 @@ class MongoDBDatabase:
 
     def getdb(self, dbname):
         """ dbname could be SA SN DA DN EEG TEMP"""
-        db = self.data_source + ':' + dbname
+        db = self.data_source + '_' + dbname
         return self.client[db]
 
     def save_static_attr(self, attr, comment={}):
@@ -301,7 +301,11 @@ class MongoDBDatabase:
     def createIndex(self, dbname, col, index):
         """ Create index on collection field """
         db = self.getdb(dbname)
-        db[col].create_index(index, pymongo.ASCENDING)
+        db[col].create_index([(idx, pymongo.ASCENDING) for idx in index])
+        """
+        Usage: db[col].create_index([('field1', pymongo.ASCENDING), ('field2', pymongo.ASCENDING), ...])
+        """
+        # db[col].create_index(index, pymongo.ASCENDING)
 
 
 class MultipleRecordException(Exception):
