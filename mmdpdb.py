@@ -10,7 +10,7 @@ mmdpdb is the database of MMDPS, containing 3 databased.
 	3. Redis is a high-speed cache that starts up upon request. 
 
 """
-import os , time
+import os, time
 
 from sqlalchemy import create_engine, exists, and_
 from sqlalchemy.orm import sessionmaker
@@ -253,10 +253,10 @@ class SQLiteDB:
 		db_mriscan = tables.MRIScan(date = dateobj, hasT1 = hasT1, hasT2 = hasT2, hasBOLD = hasBOLD, hasDWI = hasDWI, filename = scan)
 		machine.mriscans.append(db_mriscan)
 		try:
-			ret = self.session.query(exists().where(and_(tables.Person.name_pinyin == name, tables.Person.patientid == scan_info['Patient']['ID']))).scalar()
+			ret = self.session.query(exists().where(and_(tables.Person.name == name, tables.Person.patientid == scan_info['Patient']['ID']))).scalar()
 			if ret:
 				self.session.add(db_mriscan)
-				person = self.session.query(tables.Person).filter_by(name_pinyin = name).one()
+				person = self.session.query(tables.Person).filter_by(name = name).one()
 				person.mriscans.append(db_mriscan)
 				self.session.commit()
 				print('Old patient new scan %s inserted' % scan)
@@ -316,7 +316,7 @@ class SQLiteDB:
 		self.session.add(scan)
 		machine.eegscans.append(scan)
 		try:
-			person = self.session.query(tables.Person).filter(tables.Person.name == eegjson["PatientName"], tables.Person.eegid == eegjson["PatientID"]).one()
+			person = self.session.query(tables.Person).filter(tables.Person.name_chinese == eegjson["PatientName"], tables.Person.eegid == eegjson["PatientID"]).one()
 			if person.gender != to_gender(eegjson["Gender"]) or person.birth != clock.eeg_time(eegjson["BirthDate"]):
 				raise Exception('Information about %s is not consistent' % eegjson["PatientName"])
 			person.eegscans.append(scan)
@@ -327,7 +327,7 @@ class SQLiteDB:
 			print('Error when importing: multiple person records found for %s' % eegjson["PatientName"])
 			return 2
 		except NoResultFound:
-			person = tables.Person(name=eegjson["PatientName"],
+			person = tables.Person(name_chinese=eegjson["PatientName"],
 								   eegid=eegjson["PatientID"],
 								   gender=to_gender(eegjson["Gender"]),
 								   birth=clock.eeg_time(eegjson["BirthDate"])
@@ -474,3 +474,4 @@ class SQLiteDB:
 		db_scan = session.query(tables.MRIScan).filter_by(filename = mriscanFilename).one()
 		session.delete(db_scan)
 		session.commit()
+

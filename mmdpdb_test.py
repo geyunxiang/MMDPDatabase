@@ -1,9 +1,14 @@
 import numpy as np
 import mmdpdb, mongodb_database, redis_database
 import time,pickle
-import os, json
+import os, json, csv
 from mmdps import rootconfig
 from mmdps.proc import atlas, loader
+from mmdps.dms import tables
+from sqlalchemy import create_engine, exists, and_
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+
 
 atlas_list = ['brodmann_lr', 'brodmann_lrce',
 				'aal', 'aicha', 'bnatlas', 'aal2']
@@ -248,10 +253,10 @@ def MMDPDBDynamicAttr(feature_root = rootconfig.path.dynamic_feature_root):
 	Test time usage of MMDPDatabase and Redis when loading dynamic attrs
 	"""
 	rdb = redis_database.RedisDatabase()
-	db = mmdpdb.MMDPDatabase('Changgung')
+	db = mmdpdb.MMDPDatabase('MSA')
 	mriscans = os.listdir(feature_root)
 	atlas_name = 'brodmann_lrce'
-	attr_name = 'inter-region_bc'
+	attr_name = 'BOLD.BC.inter'
 	dynamic_conf = (22, 1)
 
 	load_counter = 0
@@ -273,7 +278,7 @@ def MMDPDBDynamicAttr(feature_root = rootconfig.path.dynamic_feature_root):
 	load_counter = 0
 	query_start = time.time()
 	for mriscan in mriscans:
-		attr = rdb.get_dynamic_value('Changgung', mriscan, atlas_name, attr_name, dynamic_conf[0], dynamic_conf[1])
+		attr = rdb.get_dynamic_value('MSA', mriscan, atlas_name, attr_name, dynamic_conf[0], dynamic_conf[1])
 		if attr is None:
 			pass
 			# print('! not found! scan: %s, atlas: %s, attr: %s not found!' % (mriscan, atlas_name, attr_name))
@@ -311,7 +316,7 @@ def MMDPDBDynamicNet(feature_root = rootconfig.path.dynamic_feature_root):
 	load_counter = 0
 	query_start = time.time()
 	for mriscan in mriscans:
-		attr = rdb.get_dynamic_value('Changgung', mriscan, atlas_name, 'BOLD.net', dynamic_conf[0], dynamic_conf[1])
+		attr = rdb.get_dynamic_value('MSA', mriscan, atlas_name, 'BOLD.net', dynamic_conf[0], dynamic_conf[1])
 		if attr is None:
 			pass
 			# print('! not found! scan: %s, atlas: %s, networks not found!' % (mriscan, atlas_name))
@@ -320,16 +325,16 @@ def MMDPDBDynamicNet(feature_root = rootconfig.path.dynamic_feature_root):
 	query_end = time.time()
 	query_time = query_end - query_start
 	print('Query %d dynamic networks (netattr.DynamicNet) using RedisDatabase time cost: %1.2fs' % (load_counter, query_time))
-
 if __name__ == '__main__':
 	# LoadAttrNetTest_AttrNetTest()
 	# LoadDynamicAttrTest()
 	# LoadDynamicNetTest()
 	# MongoDynamicAttrTest()
 	# MongoDynamicNetTest()
-	for num in range(2):
-		print('Round %d' %(num + 1))
+	#for num in range(2):
+	#	print('Round %d' %(num + 1))
 		# MMDPDBStaticAttr()
 		# MMDPDBStaticNet()
 		#MMDPDBDynamicAttr()
-		MMDPDBDynamicNet()
+	#	MMDPDBDynamicNet()
+	pass
