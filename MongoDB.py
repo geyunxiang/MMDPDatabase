@@ -16,7 +16,7 @@ dbname = ['static_attr', 'static_net', 'dynamic_attr',
 
 class MongoDBDatabase:
 
-    def __init__(self, data_source, host='127.0.0.1', user=None, pwd=None, dbname=None, port=27017):
+    def __init__(self, data_source, host='101.6.70.6', user='mmdpdb', pwd='123.abc', dbname=None, port=27017):
         """ Connect to mongo server """
         if user == None and pwd == None:
             self.client = pymongo.MongoClient(host, port)
@@ -207,11 +207,11 @@ class MongoDBDatabase:
         col = self.getcol(atlas_name, feature)
         count = self.sadb[col].count_documents(query)
         if count == 0:
-            raise NoRecordFoundException
+            raise NoRecordFoundException(scan+atlas_name+feature)
         elif count > 1:
-            raise MultipleRecordException
+            raise MultipleRecordException(scan+atlas_name+feature)
         else:
-            AttrData = pickle.loads(self.sadb[col].find(query)['value'])
+            AttrData = pickle.loads(self.sadb[col].find_one(query)['value'])
             atlasobj = atlas.get(atlas_name)
             attr = netattr.Attr(AttrData, atlasobj, scan, feature)
             return attr
@@ -232,33 +232,34 @@ class MongoDBDatabase:
                 attr.append_one_slice(pickle.loads(record['value']))
             return attr
 
-    def get_static_net(self, scan, atlas_name, feature, comment={}):
+    def get_static_net(self, scan, atlas_name, comment={}):
         """  Return to an static net object directly  """
         query = dict(scan=scan, comment=comment)
-        col = self.getcol(atlas_name, feature)
+        col = self.getcol(atlas_name, 'BOLD.net')
         count = self.sndb[col].count_documents(query)
         if count == 0:
-            raise NoRecordFoundException
+            raise NoRecordFoundException(scan+atlas_name+'BOLD.net')
         elif count > 1:
-            raise MultipleRecordException
+            raise MultipleRecordException(scan+atlas_name+'BOLD.net')
         else:
-            NetData = pickle.loads(self.sndb[col].find(query)['value'])
+            NetData = pickle.loads(self.sndb[col].find_one(query)['value'])
             atlasobj = atlas.get(atlas_name)
-            net = netattr.Net(NetData, atlasobj, scan, feature)
+            net = netattr.Net(NetData, atlasobj, scan, 'BOLD.net')
             return net
 
-    def get_dynamic_net(self, scan, atlas_name, feature, window_length, step_size, comment={}):
+    def get_dynamic_net(self, scan, atlas_name, window_length, step_size, comment={}):
         """ Return to dynamic attr object directly """
         query = dict(scan=scan, comment=comment)
-        col = self.dndb(atlas_name, feature, window_length, step_size)
+        # col = self.dndb(atlas_name, 'BOLD.net', window_length, step_size)
+        col = self.getcol(atlas_name, 'BOLD.net', window_length, step_size)
         if self.dndb[col].find_one(query) == None:
-            raise NoRecordFoundException((scan, atlas, feature))
+            raise NoRecordFoundException((scan, atlas, 'BOLD.net'))
         else:
             records = self.dndb[col].find(query).sort(
                 [('slice', pymongo.ASCENDING)])
             atlasobj = atlas.get(atlas_name)
             net = netattr.DynamicNet(
-                None, atlasobj, window_length, step_size, scan, feature)
+                None, atlasobj, window_length, step_size, scan, 'BOLD.net')
             for record in records:
                 net.append_one_slice(pickle.loads(record['value']))
             return net
