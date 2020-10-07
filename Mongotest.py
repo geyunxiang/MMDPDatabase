@@ -12,7 +12,7 @@ from mmdps import rootconfig
 from mmdps.proc import atlas, loader
 
 atlas_list = ['brodmann_lr', 'brodmann_lrce',
-              'aal', 'aicha', 'bnatlas', 'aal2']
+              'aal', 'aicha', 'bnatlas']
 
 DynamicAtlas = ['brodmann_lrce', 'aal']
 
@@ -91,7 +91,7 @@ def generate_dynamic_database_attrs(dynamic_rootfolder, data_source='Changgung')
                     except MDB.MultipleRecordException:
                         print('! Mutiple found scan: %s,atlas: %s, attr: %s' %
                               (mriscan, atlas_name, attrname))
-                col = mdb.getcol(atlas_name, attrname,
+                col = mdb.getcol(atlas_name, attr.feature_name,
                                  dynamic_conf[0], dynamic_conf[1])
                 mdb.createIndex('DA', col, ['scan', 'slice'])
 
@@ -99,30 +99,31 @@ def generate_dynamic_database_attrs(dynamic_rootfolder, data_source='Changgung')
 def generate_dynamic_database_networks(dynamic_rootfolder, data_source='Changgung'):
     mdb = MDB.MongoDBDatabase(data_source)
     mriscans = os.listdir(dynamic_rootfolder)
-    atlas_name = 'brodmann_lrce'
-    atlasobj = atlas.get(atlas_name)
 
-    for dynamic_conf in DynamiConf:
-        for mriscan in mriscans:
-            try:
-                net = loader.load_single_dynamic_network(
-                    mriscan, atlasobj, dynamic_conf, dynamic_rootfolder)
-                mdb.save_dynamic_net(net)
-            except OSError:
-                print('! Not found! scan: %s atlas: %s' %
-                      (mriscan, atlas_name))
-            except MDB.MultipleRecordException:
-                print('! Multiple found! scan: %s atlas:%s' %
-                      (mriscan, atlas_name))
-        col = mdb.getcol(atlas_name, 'BOLD.net',
-                         dynamic_conf[0], dynamic_conf[1])
-        mdb.createIndex('DN', col, ['scan', 'slice'])
+    for atlas_name in atlas_list:
+        atlasobj = atlas.get(atlas_name)
+        for dynamic_conf in DynamiConf:
+            for mriscan in mriscans:
+                try:
+                    net = loader.load_single_dynamic_network(
+                        mriscan, atlasobj, dynamic_conf, dynamic_rootfolder)
+                    mdb.save_dynamic_net(net)
+                except OSError:
+                    print('! Not found! scan: %s atlas: %s' %
+                          (mriscan, atlas_name))
+                except MDB.MultipleRecordException:
+                    print('! Multiple found! scan: %s atlas:%s' %
+                          (mriscan, atlas_name))
+            col = mdb.getcol(atlas_name, 'BOLD.net',
+                             dynamic_conf[0], dynamic_conf[1])
+            mdb.createIndex('DN', col, ['scan', 'slice'])
 
 
 """
 generate_static_database_attrs('Changgung')
 generate_static_database_networks('Changgung')
-generate_dynamic_database_attrs(rootfolder)
-generate_dynamic_database_networks(rootfolder)
+generate_dynamic_database_attrs(rootconfig.path.dynamic_feature_root, 'MSA')
+generate_dynamic_database_networks(rootconfig.path.dynamic_feature_root, 'MSA')
 """
+
 rootfolder = 'C:\\Users\\THU-EE-WL\\Downloads\\MSA Dynamic Features'
