@@ -48,13 +48,13 @@ class MMDPDatabase:
 	def __init__(self, data_source = 'Changgung', username = None, password = None):
 		self.rdb = redis_database.RedisDatabase()
 		if username is None:
-			self.mdb = mongodb_database.MongoDBDatabase(data_source = data_source)
+			self.mdb = mongodb_database.MongoDBDatabase(data_source= data_source)
 		else:
-			self.mdb = mongodb_database.MongoDBDatabase(data_source = data_source, username = username, password = password)
+			self.mdb = mongodb_database.MongoDBDatabase(data_source= data_source, user= username, pwd= password)
 		self.sdb = SQLiteDB()
 		self.data_source = data_source
 
-	def get_feature(self, scan_list, atlasobj, feature_name, comment = {}):
+	def get_feature(self, scan_list, atlasobj, feature_name, comment={}):
 		"""
 		Designed for static networks and attributes query.
 		Using scan name , altasobj/altasobj name, feature name and data source(the default is Changgung) to query data from Redis.
@@ -91,7 +91,7 @@ class MMDPDatabase:
 		else:
 			return ret_list
 
-	def get_dynamic_feature(self, scan_list, atlasobj, feature_name, window_length, step_size, comment = {}):
+	def get_dynamic_feature(self, scan_list, atlasobj, feature_name, window_length, step_size, comment= {}):
 		"""
 		Designed for dynamic networks and attributes query.
 		Using scan name , altasobj/altasobj name, feature name, window length, step size and data source(the default is Changgung)
