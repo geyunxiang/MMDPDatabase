@@ -68,29 +68,19 @@ class RedisDatabase:
 		except Exception as e:
 			raise Exception('Unble to stop redis，error message:' + str(e))
 
-	def set_value(self, obj, data_source):
+	def set_value(self, obj, data_source, atlas, feature, window_length=0, step_size=0):
 		"""
 		Using a dictionary, a Mongdb object, a Net class, a Attr class, a DynamicNet class or a DynamicAttr class
 			to set a new entry in Redis.
 		"""
 		if type(obj) is dict:
-			if 'comment' in obj:
-				key = self.generate_static_key(data_source, obj['scan'], obj['atlas'], obj['feature'], obj['comment'])
-			else:
-				key = self.generate_static_key(data_source, obj['scan'], obj['atlas'], obj['feature'], {})
+			key = self.generate_static_key(data_source, obj['scan'], atlas, feature, obj['comment'])
 			self.datadb.set(key, obj['value'], ex=1800)
-			return self.trans_netattr(obj['scan'], obj['atlas'], obj['feature'], pickle.loads(obj['value']))
+			return self.trans_netattr(obj['scan'], atlas, feature, pickle.loads(obj['value']))
 		elif type(obj) is list:
 			value = []
 			scan = obj[0]['scan']
-			atlas = obj[0]['atlas']
-			feature = obj[0]['feature']
-			window_length = obj[0]['window_length']
-			step_size = obj[0]['step_size']
-			if 'comment' in obj[0]:
-				comment = obj[0]['comment']
-			else:
-				comment = {}
+			comment = obj[0]['comment']
 			key_all = self.generate_dynamic_key(data_source, scan, atlas, feature, window_length, step_size, comment)
 			pipe = self.datadb.pipeline()
 			length = len(obj)

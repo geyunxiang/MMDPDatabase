@@ -23,7 +23,7 @@ from mmdps.util import loadsave, clock
 from mmdps import rootconfig
 
 # from . import mongodb_database, redis_database
-import mongodb_database, redis_database
+import MongoDB, redis_database
 from Cryptodome.Cipher import AES
 from Cryptodome import Random
 
@@ -45,12 +45,12 @@ class AESCoding:
 		return mydecrypt.decrypt(data[16:]).decode()
 
 class MMDPDatabase:
-	def __init__(self, data_source = 'Changgung', username = None, password = None):
+	def __init__(self, data_source= 'Changgung', username = None, password = None):
 		self.rdb = redis_database.RedisDatabase()
 		if username is None:
-			self.mdb = mongodb_database.MongoDBDatabase(data_source= data_source)
+			self.mdb = MongoDB.MongoDBDatabase(data_source= data_source)
 		else:
-			self.mdb = mongodb_database.MongoDBDatabase(data_source= data_source, user= username, pwd= password)
+			self.mdb = MongoDB.MongoDBDatabase(data_source= data_source, user= username, pwd= password)
 		self.sdb = SQLiteDB()
 		self.data_source = data_source
 
@@ -77,14 +77,17 @@ class MMDPDatabase:
 			if res is not None:
 				ret_list.append(res)
 			else:
-				doc = self.mdb.total_query('static', scan, atlasobj, feature_name, comment)
+				if feature_name.find('.net') == -1:
+					doc = self.mdb.total_query('SA', scan, atlasobj, feature_name, comment)
+				else:
+					doc = self.mdb.total_query('SN', scan, atlasobj, feature_name, comment)
 				doc = list(doc)
 				# doc =self.mdb.total_query('SA',scan,atlasobj,feature_name,comment)
 				# doc =self.mdb,total_query('SN',scan,atlasobj,feature_name,comment)
 				if len(doc) != 0:
-					ret_list.append(self.rdb.set_value(doc[0],self.data_source))
+					ret_list.append(self.rdb.set_value(doc[0],self.data_source, atlasobj, feature_name))
 				else:
-					raise mongodb_database.NoRecordFoundException('No such item in redis and mongodb: ' + scan + ' ' + atlasobj + ' ' + feature_name)
+					raise MongoDB.NoRecordFoundException('No such item in redis and mongodb: ' + scan + ' ' + atlasobj + ' ' + feature_name)
 					# raise Exception('No such item in redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name)
 		if return_single:
 			return ret_list[0]
@@ -115,16 +118,16 @@ class MMDPDatabase:
 			else:
 				# doc = self.mdb.total_query('DA',scan, atlasobj, feature_name, comment, window_length, step_size)
 				# doc = self.mdb.total_query('DN',scan, atlasobj, feature_name, comment, window_length, step_size)
-				if feature_name.find('BOLD.net') != -1:
-					doc = self.mdb.total_query('dynamic2', scan, atlasobj, feature_name, comment, window_length, step_size)
+				if feature_name.find('.net') == -1:
+					doc = self.mdb.total_query('DA', scan, atlasobj, feature_name, comment, window_length, step_size)
 				else:
-					doc = self.mdb.total_query('dynamic1', scan, atlasobj, feature_name, comment, window_length, step_size)
+					doc = self.mdb.total_query('DN', scan, atlasobj, feature_name, comment, window_length, step_size)
 				doc = list(doc)
 				if len(doc) != 0:
-					mat = self.rdb.set_value(doc,self.data_source)
+					mat = self.rdb.set_value(doc,self.data_source, atlasobj, feature_name, window_length, step_size)
 					ret_list.append(mat)
 				else:
-					raise mongodb_database.NoRecordFoundException('No such item in redis or mongodb: ' + scan + ' ' + atlasobj + ' ' + feature_name + ' ' + str(window_length) + ' ' + str(step_size))
+					raise MongoDB.NoRecordFoundException('No such item in redis or mongodb: ' + scan + ' ' + atlasobj + ' ' + feature_name + ' ' + str(window_length) + ' ' + str(step_size))
 					# raise Exception('No such item in both redis and mongodb: ' + scan +' '+ atlasobj +' '+ feature_name +' '+
 					# 			 ' '+ str(window_length) +' '+ str(step_size))
 		if return_single:
