@@ -321,7 +321,8 @@ if __name__ == '__main__':
 	# MongoDynamicNetTest()
 	for num in range(2):
 		print('Round %d' %(num + 1))
-		MMDPDBStaticAttr()
-		MMDPDBStaticNet()
-		MMDPDBDynamicAttr()
-		MMDPDBDynamicNet()
+		#MMDPDBStaticAttr()
+		#MMDPDBStaticNet()
+		MMDPDBDynamicAttr('E:\MRIscan\Dynamic_features_test')
+		MMDPDBDynamicNet('E:\MRIscan\Dynamic_features_test')
+

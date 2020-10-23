@@ -149,7 +149,7 @@ class MMDPDatabase:
 			raise Exception("Please input in the format as follows : key must be str, value must be a list of float or int")
 		self.rdb.set_list_all_cache(cache_key, value)
 
-	def append_cache_list(self, cache_key, value):
+	def i(self, cache_key, value):
 		"""
 		Append value to a list in redis with cache_key.
 		If the given key is empty in redis, a new list will be created.
