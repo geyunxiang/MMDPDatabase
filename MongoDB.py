@@ -17,13 +17,13 @@ dbname = ['static_attr', 'static_net', 'dynamic_attr',
 class MongoDBDatabase:
 
     def __init__(self, data_source, host='127.0.0.1', user=None, pwd=None, dbname=None, port=27017):
-        """ Connect to mongo server """
+        """ Connect to mongo server and display connecting server """
         if user == None and pwd == None:
             self.client = pymongo.MongoClient(host, port)
         else:
             uri = 'mongodb://%s:%s@%s:%s' % (user, pwd, host, str(port))
             if dbname != None:
-                uri = uri+"/" + dbname
+                uri += '/' + dbname
             self.client = pymongo.MongoClient(uri)
         print(self.client)
         with open("EEG_conf.json", 'r') as f:
@@ -40,10 +40,10 @@ class MongoDBDatabase:
     """ delete dbstats()"""
     """ delete colstats()"""
 
-    def query(self, dbname, colname, filter):
+    def query(self, dbname, colname, filter_query):
         db = self.client[dbname]
         col = db[colname]
-        return col.find(filter)
+        return col.find(filter_query)
 
     """ delete main_query() """
     """ delete quick_query() """
@@ -51,6 +51,7 @@ class MongoDBDatabase:
     def exist_query(self, dbname, scan, atlas_name, feature, comment={}, window_length=None, step_size=None):
         """ dbname could be SA SN DA DN EEG TMEP"""
         """ return only one of query records """
+        """ return None if no matching doucment is found """
         query = dict(scan=scan, comment=comment)
         db = self.getdb(dbname)
         col = self.getcol(atlas_name, feature, window_length, step_size)
@@ -65,14 +66,14 @@ class MongoDBDatabase:
         return db[col].find(query)
 
     def getcol(self, atlas_name, attrname, window_length=None, step_size=None):
-        colname = atlas_name + ':' + attrname
+        colname = atlas_name + '-' + attrname
         if (window_length, step_size) != (None, None):
-            colname += ':'+'('+str(window_length)+','+str(step_size)+')'
+            colname += '-'+str((window_length, step_size))
         return colname
 
     def getdb(self, dbname):
         """ dbname could be SA SN DA DN EEG TEMP"""
-        db = self.data_source + ':' + dbname
+        db = self.data_source + '_' + dbname
         return self.client[db]
 
     def save_static_attr(self, attr, comment={}):
@@ -188,7 +189,7 @@ class MongoDBDatabase:
         elif count > 1:
             raise MultipleRecordException((scan, mat))
         else:
-            record = self.db['EEG'].find_one(query)
+            record = self.EEG_db[feature].find_one(query)
             if field in record.keys():
                 matname = '%s_%s.mat' % (mat, field)
                 if self.EEG_conf[currentMat]['fields'] != []:
@@ -207,11 +208,11 @@ class MongoDBDatabase:
         col = self.getcol(atlas_name, feature)
         count = self.sadb[col].count_documents(query)
         if count == 0:
-            raise NoRecordFoundException
+            raise NoRecordFoundException(scan+atlas_name+feature)
         elif count > 1:
-            raise MultipleRecordException
+            raise MultipleRecordException(scan+atlas_name+feature)
         else:
-            AttrData = pickle.loads(self.sadb[col].find(query)['value'])
+            AttrData = pickle.loads(self.sadb[col].find_one(query)['value'])
             atlasobj = atlas.get(atlas_name)
             attr = netattr.Attr(AttrData, atlasobj, scan, feature)
             return attr
@@ -220,8 +221,9 @@ class MongoDBDatabase:
         """ Return to dynamic attr object directly """
         query = dict(scan=scan, comment=comment)
         col = self.getcol(atlas_name, feature, window_length, step_size)
-        if self.dadb[col].find_one(query) == None:
-            raise NoRecordFoundException
+        count = self.dadb[col].find(query)
+        if count == 0:
+            raise NoRecordFoundException(scan + atlas_name + feature)
         else:
             records = self.dadb[col].find(
                 query).sort([('slice', pymongo.ASCENDING)])
@@ -232,33 +234,33 @@ class MongoDBDatabase:
                 attr.append_one_slice(pickle.loads(record['value']))
             return attr
 
-    def get_static_net(self, scan, atlas_name, feature, comment={}):
+    def get_static_net(self, scan, atlas_name, comment={}):
         """  Return to an static net object directly  """
         query = dict(scan=scan, comment=comment)
-        col = self.getcol(atlas_name, feature)
+        col = self.getcol(atlas_name, 'BOLD.net')
         count = self.sndb[col].count_documents(query)
         if count == 0:
-            raise NoRecordFoundException
+            raise NoRecordFoundException(scan+atlas_name+'BOLD.net')
         elif count > 1:
-            raise MultipleRecordException
+            raise MultipleRecordException(scan+atlas_name+'BOLD.net')
         else:
-            NetData = pickle.loads(self.sndb[col].find(query)['value'])
+            NetData = pickle.loads(self.sndb[col].find_one(query)['value'])
             atlasobj = atlas.get(atlas_name)
-            net = netattr.Net(NetData, atlasobj, scan, feature)
+            net = netattr.Net(NetData, atlasobj, scan, 'BOLD.net')
             return net
 
-    def get_dynamic_net(self, scan, atlas_name, feature, window_length, step_size, comment={}):
+    def get_dynamic_net(self, scan, atlas_name, window_length, step_size, comment={}):
         """ Return to dynamic attr object directly """
         query = dict(scan=scan, comment=comment)
-        col = self.dndb(atlas_name, feature, window_length, step_size)
+        col = self.getcol(atlas_name, 'BOLD.net', window_length, step_size)
         if self.dndb[col].find_one(query) == None:
-            raise NoRecordFoundException((scan, atlas, feature))
+            raise NoRecordFoundException((scan, atlas, 'BOLD.net'))
         else:
             records = self.dndb[col].find(query).sort(
                 [('slice', pymongo.ASCENDING)])
             atlasobj = atlas.get(atlas_name)
             net = netattr.DynamicNet(
-                None, atlasobj, window_length, step_size, scan, feature)
+                None, atlasobj, window_length, step_size, scan, 'BOLD.net')
             for record in records:
                 net.append_one_slice(pickle.loads(record['value']))
             return net
@@ -301,7 +303,10 @@ class MongoDBDatabase:
     def createIndex(self, dbname, col, index):
         """ Create index on collection field """
         db = self.getdb(dbname)
-        db[col].create_index(index, pymongo.ASCENDING)
+        db[col].create_index([(idx, pymongo.ASCENDING) for idx in index])
+        """
+        Usage: db[col].create_index([('field1', pymongo.ASCENDING), ('field2', pymongo.ASCENDING), ...])
+        """
 
 
 class MultipleRecordException(Exception):
