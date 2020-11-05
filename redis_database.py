@@ -16,7 +16,8 @@ class RedisDatabase:
 	docstring for RedisDatabase
 	"""
 
-	def __init__(self, password = ""):
+	def __init__(self, expire_time = 1800):
+		self.expire_time = max(expire_time, 1800)
 		self.start_redis()
 
 	def is_redis_running(self):
@@ -68,37 +69,27 @@ class RedisDatabase:
 		except Exception as e:
 			raise Exception('Unble to stop redis，error message:' + str(e))
 
-	def set_value(self, obj, data_source):
+	def set_value(self, obj, data_source, atlas, feature, window_length=0, step_size=0):
 		"""
 		Using a dictionary, a Mongdb object, a Net class, a Attr class, a DynamicNet class or a DynamicAttr class
 			to set a new entry in Redis.
 		"""
 		if type(obj) is dict:
-			if 'comment' in obj:
-				key = self.generate_static_key(data_source, obj['scan'], obj['atlas'], obj['feature'], obj['comment'])
-			else:
-				key = self.generate_static_key(data_source, obj['scan'], obj['atlas'], obj['feature'], {})
-			self.datadb.set(key, obj['value'], ex=1800)
-			return self.trans_netattr(obj['scan'], obj['atlas'], obj['feature'], pickle.loads(obj['value']))
+			key = self.generate_static_key(data_source, obj['scan'], atlas, feature, obj['comment'])
+			self.datadb.set(key, obj['value'], ex=self.expire_time)
+			return self.trans_netattr(obj['scan'], atlas, feature, pickle.loads(obj['value']))
 		elif type(obj) is list:
 			value = []
 			scan = obj[0]['scan']
-			atlas = obj[0]['atlas']
-			feature = obj[0]['feature']
-			window_length = obj[0]['window_length']
-			step_size = obj[0]['step_size']
-			if 'comment' in obj[0]:
-				comment = obj[0]['comment']
-			else:
-				comment = {}
+			comment = obj[0]['comment']
 			key_all = self.generate_dynamic_key(data_source, scan, atlas, feature, window_length, step_size, comment)
 			pipe = self.datadb.pipeline()
 			length = len(obj)
 			try:
 				pipe.multi()
-				pipe.set(key_all + ':0', length, ex=1600)
+				pipe.set(key_all + ':0', length, ex=self.expire_time - 200)
 				for i in range(length):  # 使用查询关键字保证升序
-					pipe.set(key_all + ':' + str(i + 1), (obj[i]['value']), ex=1800)
+					pipe.set(key_all + ':' + str(i + 1), (obj[i]['value']), ex=self.expire_time)
 					value.append(pickle.loads(obj[i]['value']))
 				pipe.execute()
 			except Exception as e:
@@ -117,12 +108,12 @@ class RedisDatabase:
 				flag = False
 			try:
 				pipe.multi()
-				pipe.set(key_all + ':0', length, ex=1600)
+				pipe.set(key_all + ':0', length, ex=self.expire_time - 200)
 				for i in range(length):  # 使用查询关键字保证升序
 					if flag:
-						pipe.set(key_all + ':' + str(i + 1), pickle.dumps(obj.data[:, :, i]), ex=1800)
+						pipe.set(key_all + ':' + str(i + 1), pickle.dumps(obj.data[:, :, i]), ex=self.expire_time)
 					else:
-						pipe.set(key_all + ':' + str(i + 1), obj.data[:, i], ex=1800)
+						pipe.set(key_all + ':' + str(i + 1), obj.data[:, i], ex=self.expire_time)
 				pipe.execute()
 			except Exception as e:
 				raise Exception('An error occur when tring to set value in redis, error message: ' + str(e))
@@ -148,7 +139,7 @@ class RedisDatabase:
 		"""
 		key = self.generate_static_key(data_source, subject_scan, atlas_name, feature_name, comment)
 		res = self.datadb.get(key)
-		self.datadb.expire(key, 1800)
+		self.datadb.expire(key, self.expire_time)
 		if res is not None:
 			return self.trans_netattr(subject_scan, atlas_name, feature_name, pickle.loads(res))
 		else:
@@ -184,8 +175,8 @@ class RedisDatabase:
 				value = []
 				for i in range(length):
 					value.append(pickle.loads(res[i]))
-					pipe.expire(key_all + ':' + str(i+1), 1800)
-				pipe.expire(key_all + ':0', 1600)
+					pipe.expire(key_all + ':' + str(i+1), self.expire_time)
+				pipe.expire(key_all + ':0', self.expire_time - 200)
 				pipe.execute()
 			except Exception as e:
 				raise Exception('An error occur when tring to update expiration time in redis, error message: ' + str(e))

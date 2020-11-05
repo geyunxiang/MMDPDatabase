@@ -62,7 +62,9 @@ def Inimongodb_dynamic():
 
 
 if __name__ == '__main__':
-    Inimongodb()
-    Inimongodb_dynamic()
-    pass
+    #Inimongodb()
+    #Inimongodb_dynamic()
+    rdb = redis.StrictRedis(host='localhost', port=6379, db=4)
+    with open('The.Hot.Zone.S01E06.Hidden.720p.AMZN.WEB-DL.DDP5.1.H.264-NTG.mkv', 'rb') as f:
+        rdb.set('movie', f.read())
 

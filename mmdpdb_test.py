@@ -11,7 +11,7 @@ from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
 
 atlas_list = ['brodmann_lr', 'brodmann_lrce',
-				'aal', 'aicha', 'bnatlas', 'aal2']
+				'aal', 'aicha', 'bnatlas']
 
 DynamicAtlas = ['brodmann_lrce']
 #attr_list = ['bold_interBC','bold_interCCFS','bold_interLE','bold_interWD','bold_net']
@@ -188,9 +188,6 @@ def MMDPDBStaticAttr(feature_root = rootconfig.path.feature_root):
 	query_end = time.time()
 	query_time = query_end - query_start
 	print('Query %d static attrs (netattr.Attr) using MMDPDatabase time cost: %1.2fs' % (load_counter, query_time))
-	print('Redis get cost: %.2f' % mmdpdb.static_rdb_get)
-	print('Redis set cost: %.2f' % mmdpdb.static_rdb_set)
-	print('Mongo get cost: %.2f' % mmdpdb.static_mdb_get)
 
 	load_counter = 0
 	query_start = time.time()
@@ -230,9 +227,6 @@ def MMDPDBStaticNet(feature_root = rootconfig.path.feature_root):
 	query_end = time.time()
 	query_time = query_end - query_start
 	print('Query %d static networks (netattr.Net) using MMDPDatabase time cost: %1.2fs' % (load_counter, query_time))
-	print('Redis get cost: %.2f' % mmdpdb.static_rdb_get)
-	print('Redis set cost: %.2f' % mmdpdb.static_rdb_set)
-	print('Mongo get cost: %.2f' % mmdpdb.static_mdb_get)
 
 	load_counter = 0
 	query_start = time.time()
@@ -271,9 +265,6 @@ def MMDPDBDynamicAttr(feature_root = rootconfig.path.dynamic_feature_root):
 	query_end = time.time()
 	query_time = query_end - query_start
 	print('Query %d dynamic attrs (netattr.DynamicAttr) using MMDPDatabase time cost: %1.2fs' % (load_counter, query_time))
-	print('Redis get cost: %.2f' % mmdpdb.dynamic_rdb_get)
-	print('Redis set cost: %.2f' % mmdpdb.dynamic_rdb_set)
-	print('Mongo get cost: %.2f' % mmdpdb.dynamic_mdb_get)
 
 	load_counter = 0
 	query_start = time.time()
@@ -309,9 +300,6 @@ def MMDPDBDynamicNet(feature_root = rootconfig.path.dynamic_feature_root):
 	query_end = time.time()
 	query_time = query_end - query_start
 	print('Query %d dynamic networks (netattr.DynamicNet) using MMDPDatabase time cost: %1.2fs' % (load_counter, query_time))
-	print('Redis get cost: %.2f' % mmdpdb.dynamic_rdb_get)
-	print('Redis set cost: %.2f' % mmdpdb.dynamic_rdb_set)
-	print('Mongo get cost: %.2f' % mmdpdb.dynamic_mdb_get)
 
 	load_counter = 0
 	query_start = time.time()
@@ -331,10 +319,10 @@ if __name__ == '__main__':
 	# LoadDynamicNetTest()
 	# MongoDynamicAttrTest()
 	# MongoDynamicNetTest()
-	#for num in range(2):
-	#	print('Round %d' %(num + 1))
-		# MMDPDBStaticAttr()
-		# MMDPDBStaticNet()
-		#MMDPDBDynamicAttr()
-	#	MMDPDBDynamicNet()
-	pass
+	for num in range(2):
+		print('Round %d' %(num + 1))
+		#MMDPDBStaticAttr()
+		#MMDPDBStaticNet()
+		MMDPDBDynamicAttr('E:\MRIscan\Dynamic_features_test')
+		MMDPDBDynamicNet('E:\MRIscan\Dynamic_features_test')
+
