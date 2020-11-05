@@ -22,7 +22,7 @@ attr_list = ['BOLD.BC.inter', 'BOLD.CCFS.inter',
 dynamic_attr_list = ['inter-region_bc',
                      'inter-region_ccfs', 'inter-region_le', 'inter-region_wd']
 
-DynamiConf = [[22, 1], [50, 1], [100, 1], [100, 3]]
+DynamicConf = [[22, 1], [50, 1], [100, 1], [100, 3]]
 
 
 def generate_static_database_attrs(data_source='Changgung'):
@@ -45,7 +45,7 @@ def generate_static_database_attrs(data_source='Changgung'):
                     print(
                         '! Multiple record found ! scan: %s, atlas: %s, attr: %s' % (
                             mriscan, atlas_name, attr_name))
-            mdb.createIndex('SA', atlas_name+':'+attr_name, ['scan'])
+            mdb.createIndex('SA', atlas_name+'-'+attr_name, ['scan'])
 
 
 def generate_static_database_networks(data_source='Changgung'):
@@ -68,7 +68,7 @@ def generate_static_database_networks(data_source='Changgung'):
                 print(
                     '! Multiple record found ! scan: %s, atlas: %s ' % (
                         mriscan, atlas_name))
-        mdb.createIndex('SN', atlas_name+':'+'BOLD.net', ['scan'])
+        mdb.createIndex('SN', atlas_name+'-'+'BOLD.net', ['scan'])
 
 
 def generate_dynamic_database_attrs(dynamic_rootfolder, data_source='Changgung'):
@@ -77,7 +77,7 @@ def generate_dynamic_database_attrs(dynamic_rootfolder, data_source='Changgung')
 
     for atlas_name in DynamicAtlas:
         atlasobj = atlas.get(atlas_name)
-        for dynamic_conf in DynamiConf:
+        for dynamic_conf in DynamicConf:
             for attrname in dynamic_attr_list:
 
                 for mriscan in mriscans:
@@ -241,7 +241,7 @@ def test_load_dynamic_attrs(dynamic_rootfolder = rootconfig.path.dynamic_feature
     print(attr.data.shape)
 
 
-def test_load_dynamic_networks(dynamic_rootfolder = rootconfig.path.dynamic_feature_root, data_source='MSA'):
+def test_load_dynamic_networks(dynamic_rootfolder=rootconfig.path.dynamic_feature_root, data_source='MSA'):
     """
     Test query time of loader and mongo when loading dynamic networks
     All scans of a specific atlas are loaded
