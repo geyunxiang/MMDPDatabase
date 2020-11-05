@@ -66,10 +66,10 @@ class MongoDBDatabase:
         return db[col].find(query)
 
     def getcol(self, atlas_name, attrname, window_length=None, step_size=None):
-        colname = atlas_name + '-' + attrname
         if (window_length, step_size) != (None, None):
-            colname += '-'+str((window_length, step_size))
-        return colname
+            return '%s-%s-(%d,%d)' % (atlas_name, attrname, window_length, step_size)
+        else:
+            return '%s-%s' % (atlas_name, attrname)
 
     def getdb(self, dbname):
         """ dbname could be SA SN DA DN EEG TEMP"""

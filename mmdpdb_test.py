@@ -1,5 +1,5 @@
 import numpy as np
-import mmdpdb, mongodb_database, redis_database
+import mmdpdb, MongoDB, redis_database
 import time,pickle
 import os, json, csv
 from mmdps import rootconfig
@@ -182,7 +182,7 @@ def MMDPDBStaticAttr(feature_root = rootconfig.path.feature_root):
 				try:
 					attr = db.get_feature(mriscan, atlas_name, attr_name)
 					load_counter += 1
-				except mongodb_database.NoRecordFoundException:
+				except MongoDB.NoRecordFoundException:
 					pass
 					# print('! not found! scan: %s, atlas: %s, attr: %s not found!' % (mriscan, atlas_name, attr_name))
 	query_end = time.time()
@@ -221,7 +221,7 @@ def MMDPDBStaticNet(feature_root = rootconfig.path.feature_root):
 			try:
 				attr = db.get_feature(mriscan, atlas_name, 'BOLD.net')
 				load_counter += 1
-			except mongodb_database.NoRecordFoundException:
+			except MongoDB.NoRecordFoundException:
 				pass
 				# print('! not found! scan: %s, atlas: %s, networks not found!' % (mriscan, atlas_name))
 	query_end = time.time()
@@ -265,6 +265,7 @@ def MMDPDBDynamicAttr(feature_root = rootconfig.path.dynamic_feature_root):
 	query_end = time.time()
 	query_time = query_end - query_start
 	print('Query %d dynamic attrs (netattr.DynamicAttr) using MMDPDatabase time cost: %1.2fs' % (load_counter, query_time))
+	print(attr.data.shape)
 
 	load_counter = 0
 	query_start = time.time()
@@ -278,6 +279,7 @@ def MMDPDBDynamicAttr(feature_root = rootconfig.path.dynamic_feature_root):
 	query_end = time.time()
 	query_time = query_end - query_start
 	print('Query %d dynamic attrs (netattr.DynamicAttr) using RedisDatabase time cost: %1.2fs' % (load_counter, query_time))
+	print(attr.data.shape)
 
 def MMDPDBDynamicNet(feature_root = rootconfig.path.dynamic_feature_root):
 	"""
@@ -300,6 +302,7 @@ def MMDPDBDynamicNet(feature_root = rootconfig.path.dynamic_feature_root):
 	query_end = time.time()
 	query_time = query_end - query_start
 	print('Query %d dynamic networks (netattr.DynamicNet) using MMDPDatabase time cost: %1.2fs' % (load_counter, query_time))
+	print(attr.data.shape)
 
 	load_counter = 0
 	query_start = time.time()
@@ -313,6 +316,8 @@ def MMDPDBDynamicNet(feature_root = rootconfig.path.dynamic_feature_root):
 	query_end = time.time()
 	query_time = query_end - query_start
 	print('Query %d dynamic networks (netattr.DynamicNet) using RedisDatabase time cost: %1.2fs' % (load_counter, query_time))
+	print(attr.data.shape)
+
 if __name__ == '__main__':
 	# LoadAttrNetTest_AttrNetTest()
 	# LoadDynamicAttrTest()
@@ -321,8 +326,8 @@ if __name__ == '__main__':
 	# MongoDynamicNetTest()
 	for num in range(2):
 		print('Round %d' %(num + 1))
-		#MMDPDBStaticAttr()
-		#MMDPDBStaticNet()
-		MMDPDBDynamicAttr('E:\MRIscan\Dynamic_features_test')
-		MMDPDBDynamicNet('E:\MRIscan\Dynamic_features_test')
+		MMDPDBStaticAttr()
+		# MMDPDBStaticNet()
+		# MMDPDBDynamicAttr()
+		# MMDPDBDynamicNet()
 

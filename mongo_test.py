@@ -4,7 +4,7 @@ MongoDB test script goes here.
 import os
 import time
 import json
-import mongodb_database as MDB
+import MongoDB as MDB
 
 from mmdps import rootconfig
 from mmdps.proc import atlas, loader
@@ -167,7 +167,7 @@ def test_load_static_attrs(feature_root = rootconfig.path.feature_root, data_sou
                 if attr_name.find('net') != -1:
                     continue
                 try:
-                    attr = mdb.get_attr(mriscan, atlas_name, attr_name)
+                    attr = mdb.get_static_attr(mriscan, atlas_name, attr_name)
                     load_counter += 1
                 except MDB.NoRecordFoundException:
                     pass
@@ -205,7 +205,7 @@ def test_load_static_networks(feature_root = rootconfig.path.feature_root, data_
     for mriscan in mriscans:
         for atlas_name in atlas_list:
             try:
-                net = mdb.get_net(mriscan, atlas_name)
+                net = mdb.get_static_net(mriscan, atlas_name)
                 load_counter += 1
             except MDB.NoRecordFoundException:
                 pass
